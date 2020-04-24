@@ -12,7 +12,7 @@ object Day2 {
     }
 
     fun part2() {
-        val (noun, verb) = generateSequence( 0 to 0) { when (it.second) {
+        val (noun, verb) = generateSequence(0 to 0) { when (it.second) {
             99 -> when (it.first) {
                 99 -> null
                 else -> it.first + 1 to 0
