@@ -24,3 +24,10 @@ tasks {
         kotlinOptions.jvmTarget = "1.8"
     }
 }
+
+tasks.withType<Test> {
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
+}

@@ -103,11 +103,12 @@ object Day1 {
     """.trimIndent().lineSequence().map { it.toLong() }.toList()
 
     fun part1() {
-        print(input.asSequence().map { it.fuelReq() }.sum())
+        println("Day 1, part 1: ${input.asSequence().map { it.fuelReq() }.sum()}")
     }
 
     fun part2() {
-        print(input.asSequence().flatMap {
+        print("Day 1, part 2: ")
+        println(input.asSequence().flatMap {
             module -> generateSequence(module.fuelReq()) { it.fuelReq() }.takeWhile { it > 0 }
         }.sum())
     }

@@ -8,7 +8,7 @@ object Day2 {
     private val target = 19690720
 
     fun part1() {
-        print(run(12, 2))
+        println("Day 2, part 1: ${run(12, 2)}")
     }
 
     fun part2() {
@@ -19,7 +19,7 @@ object Day2 {
             }
             else -> it.first to it.second + 1
         } }.map { it to run(it.first, it.second) }.filter { it.second == target }.first().first
-        print("Noun: $noun, verb: $verb, answer: ${100 * noun + verb}")
+        print("Day 2, part 2: Noun: $noun, verb: $verb, answer: ${100 * noun + verb}")
     }
 
     private fun run(noun: Int, verb: Int): Int {
