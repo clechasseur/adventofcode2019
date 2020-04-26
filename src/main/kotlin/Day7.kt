@@ -16,10 +16,16 @@ object Day7 {
 
     fun part1() = permutations(listOf(0, 1, 2, 3, 4)).map { testSetting(it) }.max()!!
 
+    fun part2() = permutations(listOf(5, 6, 7, 8, 9)).map { testSetting(it) }.max()!!
+
     private fun testSetting(phases: List<Int>): Int {
+        val computers = phases.map { phase -> IntcodeComputer(input, phase) }
         var output = 0
-        phases.forEach { phase ->
-            output = IntcodeComputer(input, phase, output).readOutput()
+        while (!computers.last().done) {
+            computers.forEach { cpu ->
+                cpu.addInput(output)
+                output = cpu.readOutput()
+            }
         }
         return output
     }
