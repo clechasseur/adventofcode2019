@@ -1,6 +1,6 @@
 package org.clechasseur.adventofcode2019
 
-class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
+class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
     companion object {
         private const val addOp = 1
         private const val timesOp = 2
@@ -16,11 +16,11 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
         private const val immediateMode = 1
     }
 
-    private val state = initialState.toMutableList()
-    private val input = List(inputValues.size) { i -> inputValues[i] }.reversed().toMutableList()
+    private var state = State.RUNNING
+    private val ram = program.toMutableList()
+    private val input = initialInput.toMutableList()
     private val output = mutableListOf<Int>()
     private var ip = 0
-    private var done = false
     private var op: Op? = null
     private var modes = mutableListOf<Int>()
     private val ops = mapOf(
@@ -36,20 +36,45 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
     )
 
     init {
-        while (!done) {
+        run()
+    }
+
+    val memory: List<Int>
+        get() = ram
+
+    val done: Boolean
+        get() = state == State.DONE
+
+    fun addInput(value: Int) {
+        input.add(value)
+        if (state == State.WAITING_FOR_INPUT) {
+            state = State.RUNNING
+            run()
+        }
+    }
+
+    fun hasOutput() = output.isNotEmpty()
+
+    fun readOutput(): Int {
+        require(hasOutput()) { "No output to read" }
+        return output.removeAt(0)
+    }
+
+    fun readAllOutput(): List<Int> {
+        val allOutput = output.toList()
+        output.clear()
+        return allOutput
+    }
+
+    private fun run() {
+        while (state == State.RUNNING) {
             nextOp().execute()
         }
     }
 
-    val finalState: List<Int>
-        get() = state
-
-    val finalOutput: List<Int>
-        get() = output
-
     private fun nextOp(): Op {
         requireInBounds()
-        var opVal = state[ip++]
+        var opVal = ram[ip++]
         val opcode = opVal % 100
         op = ops[opcode]
         opVal /= 100
@@ -64,24 +89,19 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
 
     private fun nextParam(): Int {
         requireInBounds()
-        val param = state[ip++]
+        val param = ram[ip++]
         return when (val mode = nextMode()) {
-            positionMode -> state[param]
+            positionMode -> ram[param]
             immediateMode -> param
             else -> error("Wrong parameter mode: $mode")
         }
     }
 
-    private fun nextInput(): Int {
-        require(input.isNotEmpty()) { "No more input" }
-        return input.removeAt(input.size - 1)
-    }
-
     private fun save(value: Int) {
         requireInBounds()
-        val addr = state[ip++]
+        val addr = ram[ip++]
         require(nextMode() == positionMode) { "Saving parameters must be in position mode" }
-        state[addr] = value
+        ram[addr] = value
     }
 
     private fun nextMode(): Int = when (modes.isEmpty()) {
@@ -90,7 +110,11 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
     }
 
     private fun requireInBounds() {
-        require(ip in state.indices) { "Out of bounds" }
+        require(ip in ram.indices) { "Out of bounds" }
+    }
+
+    private enum class State {
+        RUNNING, WAITING_FOR_INPUT, DONE
     }
 
     private interface Op {
@@ -111,7 +135,12 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
 
     private inner class Save : Op {
         override fun execute() {
-            save(nextInput())
+            if (input.isNotEmpty()) {
+                save(input.removeAt(0))
+            } else {
+                ip--
+                state = State.WAITING_FOR_INPUT
+            }
         }
     }
 
@@ -163,7 +192,7 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
 
     private inner class End : Op {
         override fun execute() {
-            done = true
+            state = State.DONE
         }
     }
 }

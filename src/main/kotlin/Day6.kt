@@ -1,5 +1,3 @@
-import kotlin.math.abs
-
 object Day6 {
     private val input = """
         WLW)5M5
@@ -1042,17 +1040,13 @@ object Day6 {
 
     private val orbits = input.lineSequence().map { it.split(')') }.map { it[1] to it[0] }.toMap()
 
-    fun part1() {
-        val total = orbits.keys.map { pathToCom(it).size - 1 }.sum()
-        println("Day 6, part 1: $total")
-    }
+    fun part1() = orbits.keys.map { pathToCom(it).size - 1 }.sum()
 
-    fun part2() {
+    fun part2(): Int {
         val myPath = pathToCom("YOU").reversed()
         val sanPath = pathToCom("SAN").reversed()
         val commonLen = (myPath zip sanPath).takeWhile { it.first == it.second }.size
-        val transfers = (myPath.size - commonLen) + (sanPath.size - commonLen) - 2
-        println("Day 6, part 2: $transfers")
+        return (myPath.size - commonLen) + (sanPath.size - commonLen) - 2
     }
 
     private fun pathToCom(obj: String): List<String> {

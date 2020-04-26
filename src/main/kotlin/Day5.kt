@@ -27,14 +27,12 @@ object Day5 {
             1005,224,644,1001,223,1,223,1107,677,677,224,1002,223,2,223,1005,224,659,1001,223,1,223,1007,677,677,224,
             1002,223,2,223,1005,224,674,101,1,223,223,4,223,99,226)
 
-    fun part1() {
+    fun part1(): Int {
         val computer = IntcodeComputer(input, 1)
-        require(computer.finalOutput.dropLast(1).all { it == 0 }) { "Some tests do not pass" }
-        println("Day 5, part 1: ${computer.finalOutput.last()}")
+        val output = computer.readAllOutput()
+        require(output.dropLast(1).all { it == 0 }) { "Some tests do not pass" }
+        return output.last()
     }
 
-    fun part2() {
-        val computer = IntcodeComputer(input, 5)
-        println("Day 5, part 2: ${computer.finalOutput.first()}")
-    }
+    fun part2() = IntcodeComputer(input, 5).readOutput()
 }

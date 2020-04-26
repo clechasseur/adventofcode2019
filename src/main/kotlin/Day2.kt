@@ -7,11 +7,9 @@ object Day2 {
 
     private const val target = 19690720
 
-    fun part1() {
-        println("Day 2, part 1: ${run(12, 2)}")
-    }
+    fun part1() = run(12, 2)
 
-    fun part2() {
+    fun part2(): Int {
         val (noun, verb) = generateSequence(0 to 0) { when (it.second) {
             99 -> when (it.first) {
                 99 -> null
@@ -19,13 +17,13 @@ object Day2 {
             }
             else -> it.first to it.second + 1
         } }.map { it to run(it.first, it.second) }.filter { it.second == target }.first().first
-        print("Day 2, part 2: Noun: $noun, verb: $verb, answer: ${100 * noun + verb}")
+        return 100 * noun + verb
     }
 
     private fun run(noun: Int, verb: Int): Int {
         return IntcodeComputer(input.toMutableList().apply {
             this[1] = noun
             this[2] = verb
-        }).finalState[0]
+        }).memory[0]
     }
 }

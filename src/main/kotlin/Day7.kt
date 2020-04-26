@@ -14,15 +14,12 @@ object Day7 {
             101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,2,9,9,4,
             9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,99)
 
-    fun part1() {
-        val maxSignal = permutations(listOf(0, 1, 2, 3, 4)).map { testSetting(it) }.max()!!
-        println("Day 7, part 1: $maxSignal")
-    }
+    fun part1() = permutations(listOf(0, 1, 2, 3, 4)).map { testSetting(it) }.max()!!
 
     private fun testSetting(phases: List<Int>): Int {
         var output = 0
         phases.forEach { phase ->
-            output = IntcodeComputer(input, phase, output).finalOutput[0]
+            output = IntcodeComputer(input, phase, output).readOutput()
         }
         return output
     }

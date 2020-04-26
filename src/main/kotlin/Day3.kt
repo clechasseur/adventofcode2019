@@ -8,20 +8,19 @@ object Day3 {
         wire.splitToSequence(',').map { Move.fromString(it) }.toList()
     }
 
-    fun part1() {
+    fun part1(): Int {
         val (wire1Pts, wire2Pts) = moves.map { wirePoints(it) }
-        print("Day 3, part 1: ${manhattan(wire1Pts.intersect(wire2Pts).min()!!, Pt(0, 0))}")
+        return manhattan(wire1Pts.intersect(wire2Pts).min()!!, Pt(0, 0))
     }
 
-    fun part2() {
+    fun part2(): Int {
         val ptsToDists = mutableMapOf<Pt, MutableList<Int>>()
         moves.flatMap {
             move -> wirePoints(move).mapIndexed { i, pt -> pt to i + 1 }.distinctBy { it.first }
         }.forEach {
             ptsToDists.getOrPut(it.first) { mutableListOf() }.add(it.second)
         }
-        val lessMoves = ptsToDists.filter { it.value.size > 1 }.map { it.value.sum() }.min()!!
-        print("Day 3, part 2: $lessMoves")
+        return ptsToDists.filter { it.value.size > 1 }.map { it.value.sum() }.min()!!
     }
 
     private fun wirePoints(moves: List<Move>): List<Pt> {
