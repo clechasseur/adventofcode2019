@@ -5,7 +5,7 @@ object Day2 {
             35,39,1,39,10,43,2,9,43,47,1,47,5,51,2,51,9,55,1,13,55,59,1,13,59,63,1,6,63,67,2,13,67,71,1,10,71,75,2,13,
             75,79,1,5,79,83,2,83,9,87,2,87,13,91,1,91,5,95,2,9,95,99,1,99,5,103,1,2,103,107,1,10,107,0,99,2,14,0,0)
 
-    private val target = 19690720
+    private const val target = 19690720
 
     fun part1() {
         println("Day 2, part 1: ${run(12, 2)}")
@@ -23,10 +23,9 @@ object Day2 {
     }
 
     private fun run(noun: Int, verb: Int): Int {
-        val state = IntcodeComputer(input.toMutableList().apply {
+        return IntcodeComputer(input.toMutableList().apply {
             this[1] = noun
             this[2] = verb
-        }).run()
-        return state[0]
+        }).finalState[0]
     }
 }

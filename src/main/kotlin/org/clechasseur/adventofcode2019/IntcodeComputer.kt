@@ -1,24 +1,121 @@
 package org.clechasseur.adventofcode2019
 
-class IntcodeComputer(initialState: List<Int>) {
-    private val _state = initialState.toMutableList()
+class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
+    companion object {
+        private const val addOp = 1
+        private const val timesOp = 2
+        private const val saveOp = 3
+        private const val outOp = 4
+        private const val endOp = 99
 
-    val state: List<Int>
-        get() = _state
+        private const val positionMode = 0
+        private const val immediateMode = 1
+    }
 
-    fun run(): List<Int> {
-        var ip = 0
-        while (_state[ip] != 99) {
-            val (opcode, param1, param2, param3) = _state.subList(ip, ip + 4)
-            val in1 = _state[param1]
-            val in2 = _state[param2]
-            _state[param3] = when (opcode) {
-                1 -> in1 + in2
-                2 -> in1 * in2
-                else -> error("Wrong opcode: $opcode")
-            }
-            ip += 4
+    private val state = initialState.toMutableList()
+    private val input = List(inputValues.size) { i -> inputValues[i] }.reversed().toMutableList()
+    private val output = mutableListOf<Int>()
+    private var ip = 0
+    private var done = false
+    private var op: Op? = null
+    private var modes = mutableListOf<Int>()
+    private val ops = mapOf(
+            addOp to Add(),
+            timesOp to Times(),
+            saveOp to Save(),
+            outOp to Out(),
+            endOp to End()
+    )
+
+    init {
+        while (!done) {
+            nextOp().execute()
         }
-        return state
+    }
+
+    val finalState: List<Int>
+        get() = state
+
+    val finalOutput: List<Int>
+        get() = output
+
+    private fun nextOp(): Op {
+        requireInBounds()
+        var opVal = state[ip++]
+        val opcode = opVal % 100
+        op = ops[opcode]
+        opVal /= 100
+        modes.clear()
+        while (opVal != 0) {
+            modes.add(opVal % 10)
+            opVal /= 10
+        }
+        modes.reverse()
+        return op ?: error("Wrong opcode: $opcode")
+    }
+
+    private fun nextParam(): Int {
+        requireInBounds()
+        val param = state[ip++]
+        return when (val mode = nextMode()) {
+            positionMode -> state[param]
+            immediateMode -> param
+            else -> error("Wrong parameter mode: $mode")
+        }
+    }
+
+    private fun nextInput(): Int {
+        require(input.isNotEmpty()) { "No more input" }
+        return input.removeAt(input.size - 1)
+    }
+
+    private fun save(value: Int) {
+        requireInBounds()
+        val addr = state[ip++]
+        require(nextMode() == positionMode) { "Saving parameters must be in position mode" }
+        state[addr] = value
+    }
+
+    private fun nextMode(): Int = when (modes.isEmpty()) {
+        true -> 0
+        false -> modes.removeAt(modes.size - 1)
+    }
+
+    private fun requireInBounds() {
+        require(ip in state.indices) { "Out of bounds" }
+    }
+
+    private interface Op {
+        fun execute()
+    }
+
+    private inner class Add : Op {
+        override fun execute() {
+            save(nextParam() + nextParam())
+        }
+    }
+
+    private inner class Times : Op {
+        override fun execute() {
+            save(nextParam() * nextParam())
+        }
+    }
+
+    private inner class Save : Op {
+        override fun execute() {
+            save(nextInput())
+        }
+    }
+
+    private inner class Out : Op {
+        override fun execute() {
+            output.add(nextParam())
+        }
+    }
+
+    private inner class End : Op {
+        override fun execute() {
+            done = true
+        }
     }
 }
