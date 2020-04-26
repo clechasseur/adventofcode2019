@@ -6,6 +6,10 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
         private const val timesOp = 2
         private const val saveOp = 3
         private const val outOp = 4
+        private const val jumpIfTrueOp = 5
+        private const val jumpIfFalseOp = 6
+        private const val lessThanOp = 7
+        private const val equalsOp = 8
         private const val endOp = 99
 
         private const val positionMode = 0
@@ -24,6 +28,10 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
             timesOp to Times(),
             saveOp to Save(),
             outOp to Out(),
+            jumpIfTrueOp to JumpIfTrue(),
+            jumpIfFalseOp to JumpIfFalse(),
+            lessThanOp to LessThan(),
+            equalsOp to Equals(),
             endOp to End()
     )
 
@@ -110,6 +118,46 @@ class IntcodeComputer(initialState: List<Int>, vararg val inputValues: Int) {
     private inner class Out : Op {
         override fun execute() {
             output.add(nextParam())
+        }
+    }
+
+    private inner class JumpIfTrue : Op {
+        override fun execute() {
+            val test = nextParam()
+            val move = nextParam()
+            if (test != 0) {
+                ip = move
+            }
+        }
+    }
+
+    private inner class JumpIfFalse : Op {
+        override fun execute() {
+            val test = nextParam()
+            val move = nextParam()
+            if (test == 0) {
+                ip = move
+            }
+        }
+    }
+
+    private inner class LessThan : Op {
+        override fun execute() {
+            val in1 = nextParam()
+            val in2 = nextParam()
+            save(when (in1 < in2) {
+                true -> 1
+                false -> 0
+            })
+        }
+    }
+
+    private inner class Equals : Op {
+        override fun execute() {
+            save(when (nextParam() == nextParam()) {
+                true -> 1
+                false -> 0
+            })
         }
     }
 

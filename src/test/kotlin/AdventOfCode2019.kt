@@ -40,4 +40,14 @@ class AdventOfCode2019 {
     fun `day 4, part 2`() {
         Day4.part2()
     }
+
+    @Test
+    fun `day 5, part 1`() {
+        Day5.part1()
+    }
+
+    @Test
+    fun `day 5, part 2`() {
+        Day5.part2()
+    }
 }
