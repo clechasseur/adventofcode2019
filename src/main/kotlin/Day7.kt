@@ -15,14 +15,29 @@ object Day7 {
             9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,99)
 
     fun part1() {
-        //
+        val maxSignal = permutations(listOf(0, 1, 2, 3, 4)).map { testSetting(it) }.max()!!
+        println("Day 7, part 1: $maxSignal")
     }
 
-    private fun testSetting(vararg phases: Int): Int {
+    private fun testSetting(phases: List<Int>): Int {
         var output = 0
         phases.forEach { phase ->
             output = IntcodeComputer(input, phase, output).finalOutput[0]
         }
         return output
+    }
+
+    private fun permutations(elements: List<Int>): Sequence<List<Int>> {
+        if (elements.size == 1) {
+            return sequenceOf(listOf(elements.first()))
+        }
+
+        return elements.asSequence().flatMap { elem ->
+            val subIt = permutations(elements - elem).iterator()
+            generateSequence { when (subIt.hasNext()) {
+                true -> listOf(elem) + subIt.next()
+                false -> null
+            } }
+        }
     }
 }
