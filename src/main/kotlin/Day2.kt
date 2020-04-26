@@ -23,11 +23,10 @@ object Day2 {
     }
 
     private fun run(noun: Int, verb: Int): Int {
-        val state = input.toMutableList().apply {
+        val state = IntcodeComputer(input.toMutableList().apply {
             this[1] = noun
             this[2] = verb
-        }
-        IntcodeComputer.run(state)
+        }).run()
         return state[0]
     }
 }
