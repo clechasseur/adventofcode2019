@@ -1,4 +1,5 @@
 import org.clechasseur.adventofcode2019.IntcodeComputer
+import org.clechasseur.adventofcode2019.math.generatePairSequence
 
 object Day2 {
     private val input = listOf(1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,9,19,1,19,5,23,2,23,13,27,1,10,27,31,2,31,6,35, 1,5,
@@ -10,13 +11,9 @@ object Day2 {
     fun part1() = run(12, 2)
 
     fun part2(): Int {
-        val (noun, verb) = generateSequence(0 to 0) { when (it.second) {
-            99 -> when (it.first) {
-                99 -> null
-                else -> it.first + 1 to 0
-            }
-            else -> it.first to it.second + 1
-        } }.map { it to run(it.first, it.second) }.filter { it.second == target }.first().first
+        val (noun, verb) = generatePairSequence(0..99, 0..99).map {
+            it to run(it.first, it.second)
+        }.filter { it.second == target }.first().first
         return 100 * noun + verb
     }
 

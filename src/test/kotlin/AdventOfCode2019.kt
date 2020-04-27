@@ -87,9 +87,25 @@ class AdventOfCode2019 {
     }
 
     class Day8Puzzles {
+        companion object {
+            private val part2expected = """
+                1110010010111001111010010
+                1001010010100101000010010
+                1001011110100101110010010
+                1110010010111001000010010
+                1000010010100001000010010
+                1000010010100001111001100
+            """.trimIndent()
+        }
+
         @Test
         fun `day 8, part 1`() {
             assertEquals(1452, Day8.part1())
+        }
+
+        @Test
+        fun `day 8, part 2`() {
+            assertEquals(part2expected, Day8.part2().joinToString("\n"))
         }
     }
 }
