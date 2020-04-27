@@ -1,4 +1,5 @@
 import org.clechasseur.adventofcode2019.IntcodeComputer
+import org.clechasseur.adventofcode2019.math.permutations
 
 object Day7 {
     private val input = listOf(3,8,1001,8,10,8,105,1,0,0,21,34,55,68,93,106,187,268,349,430,99999,3,9,102,5,9,9,1001,
@@ -28,19 +29,5 @@ object Day7 {
             }
         }
         return output
-    }
-
-    private fun permutations(elements: List<Int>): Sequence<List<Int>> {
-        if (elements.size == 1) {
-            return sequenceOf(listOf(elements.first()))
-        }
-
-        return elements.asSequence().flatMap { elem ->
-            val subIt = permutations(elements - elem).iterator()
-            generateSequence { when (subIt.hasNext()) {
-                true -> listOf(elem) + subIt.next()
-                false -> null
-            } }
-        }
     }
 }
