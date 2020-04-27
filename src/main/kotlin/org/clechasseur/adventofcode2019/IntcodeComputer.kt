@@ -1,6 +1,6 @@
 package org.clechasseur.adventofcode2019
 
-class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
+class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
     companion object {
         private const val addOp = 1
         private const val timesOp = 2
@@ -10,19 +10,22 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         private const val jumpIfFalseOp = 6
         private const val lessThanOp = 7
         private const val equalsOp = 8
+        private const val offsetRelativeBaseOp = 9
         private const val endOp = 99
 
         private const val positionMode = 0
         private const val immediateMode = 1
+        private const val relativeMode = 2
     }
 
     private var state = State.RUNNING
     private val ram = program.toMutableList()
     private val input = initialInput.toMutableList()
-    private val output = mutableListOf<Int>()
+    private val output = mutableListOf<Long>()
     private var ip = 0
     private var op: Op? = null
     private var modes = mutableListOf<Int>()
+    private var relativeBase = 0
     private val ops = mapOf(
             addOp to Add(),
             timesOp to Times(),
@@ -32,6 +35,7 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
             jumpIfFalseOp to JumpIfFalse(),
             lessThanOp to LessThan(),
             equalsOp to Equals(),
+            offsetRelativeBaseOp to OffsetRelativeBase(),
             endOp to End()
     )
 
@@ -39,13 +43,13 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         run()
     }
 
-    val memory: List<Int>
+    val memory: List<Long>
         get() = ram
 
     val done: Boolean
         get() = state == State.DONE
 
-    fun addInput(value: Int) {
+    fun addInput(value: Long) {
         input.add(value)
         if (state == State.WAITING_FOR_INPUT) {
             state = State.RUNNING
@@ -55,12 +59,12 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
 
     fun hasOutput() = output.isNotEmpty()
 
-    fun readOutput(): Int {
+    fun readOutput(): Long {
         require(hasOutput()) { "No output to read" }
         return output.removeAt(0)
     }
 
-    fun readAllOutput(): List<Int> {
+    fun readAllOutput(): List<Long> {
         val allOutput = output.toList()
         output.clear()
         return allOutput
@@ -72,9 +76,22 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         }
     }
 
+    private fun getRam(offset: Int): Long = when {
+        offset < 0 -> error("Negative memory address access: $offset")
+        offset in ram.indices -> ram[offset]
+        else -> 0
+    }
+
+    private fun setRam(offset: Int, value: Long) {
+        require(offset >= 0) { "Negative memory address access: $offset" }
+        if (offset !in ram.indices) {
+            ram.addAll(generateSequence { 0L }.take(offset - ram.indices.last))
+        }
+        ram[offset] = value
+    }
+
     private fun nextOp(): Op {
-        requireInBounds()
-        var opVal = ram[ip++]
+        var opVal = getRam(ip++).toInt()
         val opcode = opVal % 100
         op = ops[opcode]
         opVal /= 100
@@ -87,30 +104,28 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         return op ?: error("Wrong opcode: $opcode")
     }
 
-    private fun nextParam(): Int {
-        requireInBounds()
-        val param = ram[ip++]
+    private fun nextParam(): Long {
+        val param = getRam(ip++)
         return when (val mode = nextMode()) {
-            positionMode -> ram[param]
+            positionMode -> getRam(param.toInt())
             immediateMode -> param
+            relativeMode -> getRam(param.toInt() + relativeBase)
             else -> error("Wrong parameter mode: $mode")
         }
     }
 
-    private fun save(value: Int) {
-        requireInBounds()
-        val addr = ram[ip++]
-        require(nextMode() == positionMode) { "Saving parameters must be in position mode" }
-        ram[addr] = value
+    private fun save(value: Long) {
+        val addr = getRam(ip++)
+        when (val mode = nextMode()) {
+            positionMode -> setRam(addr.toInt(), value)
+            relativeMode -> setRam(addr.toInt() + relativeBase, value)
+            else -> error("Wrong parameter mode for saving: $mode")
+        }
     }
 
     private fun nextMode(): Int = when (modes.isEmpty()) {
         true -> 0
         false -> modes.removeAt(modes.size - 1)
-    }
-
-    private fun requireInBounds() {
-        require(ip in ram.indices) { "Out of bounds" }
     }
 
     private enum class State {
@@ -154,8 +169,8 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         override fun execute() {
             val test = nextParam()
             val move = nextParam()
-            if (test != 0) {
-                ip = move
+            if (test != 0L) {
+                ip = move.toInt()
             }
         }
     }
@@ -164,8 +179,8 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
         override fun execute() {
             val test = nextParam()
             val move = nextParam()
-            if (test == 0) {
-                ip = move
+            if (test == 0L) {
+                ip = move.toInt()
             }
         }
     }
@@ -187,6 +202,12 @@ class IntcodeComputer(program: List<Int>, vararg initialInput: Int) {
                 true -> 1
                 false -> 0
             })
+        }
+    }
+
+    private inner class OffsetRelativeBase : Op {
+        override fun execute() {
+            relativeBase += nextParam().toInt()
         }
     }
 

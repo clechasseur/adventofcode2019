@@ -108,4 +108,16 @@ class AdventOfCode2019 {
             assertEquals(part2expected, Day8.part2().joinToString("\n"))
         }
     }
+
+    class Day9Puzzles {
+        @Test
+        fun `day 9, part 1`() {
+            assertEquals(3765554916L, Day9.part1())
+        }
+
+        @Test
+        fun `day 9, part 2`() {
+            assertEquals(76642L, Day9.part2())
+        }
+    }
 }
