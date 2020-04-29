@@ -1,4 +1,5 @@
 import org.clechasseur.adventofcode2019.Pt3D
+import org.clechasseur.adventofcode2019.manhattan
 import org.clechasseur.adventofcode2019.toPt3D
 import kotlin.math.abs
 import kotlin.math.sign
@@ -16,23 +17,21 @@ object Day12 {
     fun part1() = initialMoons.move(1_000).sumBy { it.energy }
 
     fun part2(): Long {
-        val timelapse = generateSequence(initialMoons) { it.moveOnce() }.sortedBy { it.hashCode() }
-        val timeIterator = timelapse.iterator()
-        var prevMoons: List<Moon>? = null
-        var steps = 0L
-        while (timeIterator.hasNext()) {
-            if (prevMoons == null) {
-                prevMoons = timeIterator.next()
+        val history = UniverseHistory()
+        var state = initialMoons
+        var step = 0L
+        var duration: Long? = null
+        while (duration == null) {
+            val pastStep = history.seenAtStep(state)
+            if (pastStep != null) {
+                duration = step - pastStep
             } else {
-                val nextMoons = timeIterator.next()
-                steps++
-                if (nextMoons == prevMoons) {
-                    return steps
-                }
-                prevMoons = nextMoons
+                history.addState(state, step)
+                state = state.moveOnce()
+                step++
             }
         }
-        error("Ran out of universe")
+        return duration
     }
 
     private fun List<Moon>.move(steps: Int) = generateSequence(this) { it.moveOnce() }.drop(1).take(steps).last()
@@ -66,3 +65,22 @@ private val Pt3D.energy get() = abs(x) + abs(y) + abs(z)
 private val Moon.potentialEnergy get() = position.energy
 private val Moon.kineticEnergy get() = velocity.energy
 private val Moon.energy get() = potentialEnergy * kineticEnergy
+
+private class UniverseHistory {
+    private val history = mutableMapOf<Int, MutableList<Pair<String, Long>>>()
+
+    fun seenAtStep(state: List<Moon>): Long? {
+        val stateHistoryString = state.stateHistoryString
+        return when (val stateList = history[state.stateKey]) {
+            null -> null
+            else -> stateList.find { it.first == stateHistoryString }?.second
+        }
+    }
+
+    fun addState(state: List<Moon>, step: Long) {
+        history.getOrPut(state.stateKey) { mutableListOf() }.add(state.stateHistoryString to step)
+    }
+
+    private val List<Moon>.stateKey get() = map { manhattan(it.position, Pt3D.ZERO) }.sum()
+    private val List<Moon>.stateHistoryString get() = joinToString("") { it.toString() }
+}
