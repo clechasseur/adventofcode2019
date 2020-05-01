@@ -163,7 +163,7 @@ class AdventOfCode2019 {
 
         @Test
         fun `day 12, part 2`() {
-            assertEquals(0L, Day12.part2())
+            assertEquals(334_945_516_288_044L, Day12.part2())
         }
     }
 }

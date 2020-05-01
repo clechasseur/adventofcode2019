@@ -26,19 +26,39 @@ fun generatePairSequence(firstRange: IntRange, secondRange: IntRange): Sequence<
     } }
 }
 
-fun factors(n: Int): List<Int> {
-    return generateSequence(1) { when {
-        it < n -> it + 1
+fun factors(n: Long): List<Long> {
+    return generateSequence(1L) { when {
+        it < n -> it + 1L
         else -> null
-    } }.filter { n % it == 0 }.toList()
+    } }.filter { n % it == 0L }.toList()
 }
 
-fun reduceFraction(numerator: Int, denominator: Int): Pair<Int, Int> {
-    require(denominator != 0) { "Divide by zero error" }
+fun greatestCommonDenominator(a: Long, b: Long): Long {
+    // https://en.wikipedia.org/wiki/Euclidean_algorithm
+    require(a >= 0 && b >= 0) { "Cannot find GCD for negative numbers" }
+    var rMinus2 = a % b
+    var rMinus1 = b % rMinus2
+    var r = rMinus2 % rMinus1
+    while (r != 0L) {
+        rMinus2 = rMinus1
+        rMinus1 = r
+        r = rMinus2 % rMinus1
+    }
+    return rMinus1
+}
+
+fun leastCommonMultiple(a: Long, b: Long): Long {
+    // https://en.wikipedia.org/wiki/Least_common_multiple
+    require(a >= 0 && b >= 0) { "Cannot find LCM for negative numbers" }
+    return a / greatestCommonDenominator(a, b) * b
+}
+
+fun reduceFraction(numerator: Long, denominator: Long): Pair<Long, Long> {
+    require(denominator != 0L) { "Divide by zero error" }
     return when (numerator) {
-        0 -> 0 to 1
+        0L -> 0L to 1L
         else -> {
-            val gcd = factors(abs(numerator)).intersect(factors(abs(denominator))).last()
+            val gcd = greatestCommonDenominator(abs(numerator), abs(denominator))
             (numerator / gcd) to (denominator / gcd)
         }
     }

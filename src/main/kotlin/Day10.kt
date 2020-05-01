@@ -84,8 +84,8 @@ object Day10 {
                 diff.x == 0 -> Pt(0, diff.y.sign)
                 diff.y == 0 -> Pt(diff.x.sign, 0)
                 else -> {
-                    val reduced = reduceFraction(diff.x, diff.y)
-                    Pt(reduced.first, reduced.second)
+                    val reduced = reduceFraction(diff.x.toLong(), diff.y.toLong())
+                    Pt(reduced.first.toInt(), reduced.second.toInt())
                 }
             }
             generateSequence(blocker + displacement) { it + displacement }.takeWhile { inBounds(it) }.toList()
