@@ -182,7 +182,12 @@ class AdventOfCode2019 {
     class Day14Puzzles {
         @Test
         fun `day 14, part 1`() {
-            assertEquals(0, Day14.part1())
+            assertEquals(720_484L, Day14.part1())
+        }
+
+        @Test
+        fun `day 14, part 2`() {
+            assertEquals(1_993_284L, Day14.part2())
         }
     }
 }

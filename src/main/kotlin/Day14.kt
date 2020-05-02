@@ -1,4 +1,5 @@
 import kotlin.math.ceil
+import kotlin.math.min
 
 object Day14 {
     private val input = """
@@ -64,59 +65,56 @@ object Day14 {
         3 MSKT, 3 NDJG => 5 QDHJT
     """.trimIndent().lineSequence().map { it.toReaction() }.toList()
 
-    fun part1(): Int {
-        val root = Node(input.find { it.output.name == "FUEL" }!!)
-        populateChildren(root)
-        val storage = mutableListOf(Component(Int.MAX_VALUE, "ORE"))
-        var reactionsNodes = root.leafs.toMutableList()
-        while (storage.none { it.name == "FUEL" }) {
-            val reactionNode = reactionsNodes.first()
-            if (storage.removeComponents(reactionNode.value.inputs)) {
-                storage.addComponent(reactionNode.value.output)
+    fun part1(): Long = getOreFor(Component(1L, "FUEL"), mutableListOf())
+
+    fun part2(): Long {
+        val oreForSoMuchFuel = getOreFor(Component(3_000_000L, "FUEL"), mutableListOf())
+        return (3_000_000L * 1_000_000_000_000L) / oreForSoMuchFuel
+    }
+
+    private fun getOreFor(component: Component, excess: MutableList<Component>): Long = when (component.name) {
+        "ORE" -> component.quantity
+        else -> {
+            when (val available = excess.getExcess(component)) {
+                component.quantity -> 0L
+                else -> {
+                    val required = component.quantity - available
+                    val reaction = input.find { it.output.name == component.name }!!.producingAtLeast(required)
+                    val oreForReaction = reaction.inputs.map { getOreFor(it, excess) }.sum()
+                    excess.addExcess(Component(reaction.output.quantity - required, component.name))
+                    oreForReaction
+                }
             }
         }
     }
 
-    private fun populateChildren(node: Node<Reaction>) {
-        node.children.addAll(node.value.inputs.map { needed ->
-            Node(input.find { it.output.name == needed.name }!!.producingAtLeast(needed.quantity), node)
-        })
-        node.children.forEach { populateChildren(it) }
+    private fun MutableList<Component>.getExcess(component: Component): Long {
+        val reserve = find { it.name == component.name } ?: return 0L
+        remove(reserve)
+        val excess = min(reserve.quantity, component.quantity)
+        if (reserve.quantity - excess > 0L) {
+            add(Component(reserve.quantity - excess, reserve.name))
+        }
+        return excess
     }
 
-    private fun MutableList<Component>.addComponent(component: Component) {
-        when (val reserve = find { it.name == component.name }) {
-            null -> add(component)
-            else -> {
-                remove(reserve)
-                add(Component(reserve.quantity + component.quantity, reserve.name))
-            }
+    private fun MutableList<Component>.addExcess(component: Component) {
+        val reserve = find { it.name == component.name }
+        val excess = component.quantity + (reserve?.quantity ?: 0L)
+        if (reserve != null) {
+            remove(reserve)
         }
-    }
-
-    private fun MutableList<Component>.removeComponents(inputs: List<Component>): Boolean {
-        val hasRequirements = inputs.map { component ->
-            val reserve = find { it.name == component.name }
-            reserve != null && reserve.quantity >= component.quantity
-        }.reduce { acc, b -> acc && b }
-        if (hasRequirements) {
-            inputs.forEach { component ->
-                val reserve = find { it.name == component.name }!!
-                remove(reserve)
-                add(Component(reserve.quantity - component.quantity, reserve.name))
-            }
-        }
-        return hasRequirements
+        add(Component(excess, component.name))
     }
 }
 
-private data class Component(val quantity: Int, val name: String)
+private data class Component(val quantity: Long, val name: String)
 
 private data class Reaction(val inputs: List<Component>, val output: Component)
 
 private fun String.toComponent(): Component {
     val (quantity, name) = split(' ')
-    return Component(quantity.toInt(), name)
+    return Component(quantity.toLong(), name)
 }
 
 private fun String.toReaction(): Reaction {
@@ -124,16 +122,7 @@ private fun String.toReaction(): Reaction {
     return Reaction(inputs.split(", ").map { it.toComponent() }, output.toComponent())
 }
 
-private operator fun Component.times(n: Int) = Component(quantity * n, name)
-private operator fun Reaction.times(n: Int) = Reaction(inputs.map { it * n }, output * n)
-private fun Reaction.producingAtLeast(n: Int) =  this * ceil(n.toDouble() / output.quantity.toDouble()).toInt()
-
-private class Node<T>(val value: T, val parent: Node<T>? = null) {
-    val children = mutableListOf<Node<T>>()
-
-    val leafs: List<Node<T>>
-        get() = when (children.isEmpty()) {
-            true -> listOf(this)
-            false -> children.flatMap { it.leafs }
-        }
-}
+private operator fun Component.times(n: Long) = Component(quantity * n, name)
+private operator fun Reaction.times(n: Long) = Reaction(inputs.map { it * n }, output * n)
+private fun Reaction.producingAtLeast(quantity: Long)
+        = this * ceil(quantity.toDouble() / output.quantity.toDouble()).toLong()
