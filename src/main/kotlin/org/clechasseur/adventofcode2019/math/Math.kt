@@ -35,21 +35,20 @@ fun factors(n: Long): List<Long> {
 
 fun greatestCommonDenominator(a: Long, b: Long): Long {
     // https://en.wikipedia.org/wiki/Euclidean_algorithm
-    require(a >= 0 && b >= 0) { "Cannot find GCD for negative numbers" }
-    var rMinus2 = a % b
-    var rMinus1 = b % rMinus2
-    var r = rMinus2 % rMinus1
+    require(a > 0L && b > 0L) { "Can only find GCD for positive numbers" }
+    var rm = b
+    var r = a % rm
     while (r != 0L) {
-        rMinus2 = rMinus1
-        rMinus1 = r
-        r = rMinus2 % rMinus1
+        val rm2 = rm
+        rm = r
+        r = rm2 % rm
     }
-    return rMinus1
+    return rm
 }
 
 fun leastCommonMultiple(a: Long, b: Long): Long {
     // https://en.wikipedia.org/wiki/Least_common_multiple
-    require(a >= 0 && b >= 0) { "Cannot find LCM for negative numbers" }
+    require(a > 0L && b > 0L) { "Can only find LCM for positive numbers" }
     return a / greatestCommonDenominator(a, b) * b
 }
 
