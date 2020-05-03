@@ -1,7 +1,11 @@
 package org.clechasseur.adventofcode2019
 
-class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
+class IntcodeComputer(program: List<Long>, vararg initialInput: Long, initialState: State = State.RUNNING) {
     companion object {
+        enum class State {
+            RUNNING, WAITING_FOR_INPUT, DONE
+        }
+
         private const val addOp = 1
         private const val timesOp = 2
         private const val saveOp = 3
@@ -18,13 +22,12 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
         private const val relativeMode = 2
     }
 
-    private var state = State.RUNNING
+    private var state = initialState
     private val ram = program.toMutableList()
     private val input = initialInput.toMutableList()
     private val output = mutableListOf<Long>()
     private var ip = 0
-    private var op: Op? = null
-    private var modes = mutableListOf<Int>()
+    private val modes = mutableListOf<Int>()
     private var relativeBase = 0
     private val ops = mapOf(
             addOp to Add(),
@@ -70,6 +73,15 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
         return allOutput
     }
 
+    fun snapshot(): IntcodeComputer {
+        require(state != State.RUNNING) { "Cannot snapshot a running computer" }
+        val clone = IntcodeComputer(ram, *input.toLongArray(), initialState = state)
+        clone.output.addAll(output)
+        clone.ip = ip
+        clone.relativeBase = relativeBase
+        return clone
+    }
+
     private fun run() {
         while (state == State.RUNNING) {
             nextOp().execute()
@@ -93,7 +105,7 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
     private fun nextOp(): Op {
         var opVal = getRam(ip++).toInt()
         val opcode = opVal % 100
-        op = ops[opcode]
+        val op = ops[opcode] ?: error("Wrong opcode: $opcode")
         opVal /= 100
         modes.clear()
         while (opVal != 0) {
@@ -101,7 +113,7 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
             opVal /= 10
         }
         modes.reverse()
-        return op ?: error("Wrong opcode: $opcode")
+        return op
     }
 
     private fun nextParam(): Long {
@@ -126,10 +138,6 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long) {
     private fun nextMode(): Int = when (modes.isEmpty()) {
         true -> 0
         false -> modes.removeAt(modes.size - 1)
-    }
-
-    private enum class State {
-        RUNNING, WAITING_FOR_INPUT, DONE
     }
 
     private interface Op {
