@@ -17,16 +17,6 @@ object Day16 {
         return result.drop(offset).take(8).joinToString("").toInt()
     }
 
-    private fun patternFor(elementIdx: Int) = basePattern.asSequence().eachRepeated(elementIdx + 1).keepGoing().drop(1)
-
-//    private fun fft(signal: List<Long>): Sequence<List<Long>> = generateSequence(signal) {
-//        prevSignal -> prevSignal.mapIndexed {
-//            elementIdx, _ -> abs(prevSignal.asSequence().zip(patternFor(elementIdx)).map {
-//                (element, patternValue) -> element * patternValue
-//            }.sum()) % 10
-//        }
-//    }.drop(1)
-
     private fun fft(signal: List<Long>): Sequence<List<Long>> = generateSequence(signal) {
         prevSignal -> signal.indices.map { elementIdx ->
             var idx = elementIdx
@@ -49,14 +39,6 @@ object Day16 {
             abs(result) % 10
         }
     }.drop(1)
-}
-
-private fun <T> Sequence<T>.eachRepeated(n: Int) = sequence {
-    val iter = iterator()
-    while (iter.hasNext()) {
-        val value = iter.next()
-        yieldAll((1..n).map { value })
-    }
 }
 
 private fun <T> Sequence<T>.keepGoing() = sequence {
