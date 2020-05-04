@@ -1,4 +1,5 @@
 import kotlin.math.abs
+import kotlin.math.min
 
 object Day16 {
     private val input = """
@@ -16,14 +17,36 @@ object Day16 {
         return result.drop(offset).take(8).joinToString("").toInt()
     }
 
-    private fun patternFor(elementIdx: Int)
-            = basePattern.asSequence().eachRepeated(elementIdx + 1).keepGoing().drop(1)
+    private fun patternFor(elementIdx: Int) = basePattern.asSequence().eachRepeated(elementIdx + 1).keepGoing().drop(1)
+
+//    private fun fft(signal: List<Long>): Sequence<List<Long>> = generateSequence(signal) {
+//        prevSignal -> prevSignal.mapIndexed {
+//            elementIdx, _ -> abs(prevSignal.asSequence().zip(patternFor(elementIdx)).map {
+//                (element, patternValue) -> element * patternValue
+//            }.sum()) % 10
+//        }
+//    }.drop(1)
 
     private fun fft(signal: List<Long>): Sequence<List<Long>> = generateSequence(signal) {
-        prevSignal -> prevSignal.mapIndexed {
-            elementIdx, _ -> abs(prevSignal.asSequence().zip(patternFor(elementIdx)).map {
-                (element, patternValue) -> element * patternValue
-            }.sum()) % 10
+        prevSignal -> signal.indices.map { elementIdx ->
+            var idx = elementIdx
+            var result = 0L
+            var sign = 1
+            while (idx < prevSignal.size) {
+                val readOffset = min(elementIdx, prevSignal.size - (idx + 1))
+                if (sign > 0) {
+                    for (valIdx in idx..(idx + readOffset)) {
+                        result += prevSignal[valIdx]
+                    }
+                } else {
+                    for (valIdx in idx..(idx + readOffset)) {
+                        result -= prevSignal[valIdx]
+                    }
+                }
+                sign = -sign
+                idx += (elementIdx + 1) * 2
+            }
+            abs(result) % 10
         }
     }.drop(1)
 }
