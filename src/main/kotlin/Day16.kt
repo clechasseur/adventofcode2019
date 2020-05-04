@@ -13,34 +13,43 @@ object Day16 {
     fun part2(): Int {
         val bigInput = input.asSequence().keepGoing().take(10_000 * input.size).toList()
         val offset = bigInput.take(7).joinToString("").toInt()
-        val result = fft(bigInput, offset).take(100).last()
+        val result = tailFft(bigInput, offset).take(100).last()
         return result.drop(offset).take(8).joinToString("").toInt()
     }
 
-    private fun fft(signal: List<Long>, offset: Int = 0): Sequence<List<Long>> = generateSequence(signal) {
-        prevSignal -> signal.indices.map { elementIdx -> when {
-            elementIdx < offset -> 0
-            else -> {
-                var idx = elementIdx
-                var result = 0L
-                var sign = 1
-                while (idx < prevSignal.size) {
-                    val readOffset = min(elementIdx, prevSignal.size - (idx + 1))
-                    if (sign > 0) {
-                        for (valIdx in idx..(idx + readOffset)) {
-                            result += prevSignal[valIdx]
-                        }
-                    } else {
-                        for (valIdx in idx..(idx + readOffset)) {
-                            result -= prevSignal[valIdx]
-                        }
+    private fun fft(signal: List<Long>): Sequence<List<Long>> = generateSequence(signal) {
+        prevSignal -> signal.indices.map { elementIdx ->
+            var idx = elementIdx
+            var result = 0L
+            var sign = 1
+            while (idx < prevSignal.size) {
+                val readOffset = min(elementIdx, prevSignal.size - (idx + 1))
+                if (sign > 0) {
+                    for (valIdx in idx..(idx + readOffset)) {
+                        result += prevSignal[valIdx]
                     }
-                    sign = -sign
-                    idx += (elementIdx + 1) * 2
+                } else {
+                    for (valIdx in idx..(idx + readOffset)) {
+                        result -= prevSignal[valIdx]
+                    }
                 }
-                abs(result) % 10
+                sign = -sign
+                idx += (elementIdx + 1) * 2
             }
-        } }
+            abs(result) % 10
+        }
+    }.drop(1)
+
+    private fun tailFft(signal: List<Long>, offset: Int): Sequence<List<Long>> = generateSequence(signal) { prevSignal ->
+        val nextSignal = MutableList(prevSignal.size) { 0L }
+        nextSignal[nextSignal.size - 1] = prevSignal.last()
+        for (i in (prevSignal.indices.last - 1) downTo offset) {
+            nextSignal[i] = prevSignal[i] + nextSignal[i + 1]
+        }
+        for (i in (prevSignal.indices.last - 1) downTo offset) {
+            nextSignal[i] = nextSignal[i] % 10
+        }
+        nextSignal
     }.drop(1)
 }
 
