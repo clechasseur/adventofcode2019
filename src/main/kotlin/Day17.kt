@@ -88,17 +88,47 @@ object Day17 {
     private fun inBounds(view: List<List<Char>>, pt: Pt) = pt.y in view.indices && pt.x in view[0].indices
 
     private fun buildProgram(path: List<BotMovement>): BotProgram
-            = buildProgram(path, BotProgram(listOf(listOf(path.first()))), path.drop(1))!!
+            = buildProgram(path, BotProgram(listOf(listOf(path.first(), path.drop(1).first()))), path.drop(2))!!
 
     private fun buildProgram(path: List<BotMovement>, soFar: BotProgram, remaining: List<BotMovement>): BotProgram? = when {
         soFar.programs.size > 3 -> null
-        remaining.isEmpty() -> if (soFar.validFor(path)) soFar else null
+        remaining.removeMatching(soFar).isEmpty() -> if (soFar.validFor(path)) soFar else null
         else -> {
-            buildProgram(path, BotProgram(
-                    soFar.programs.dropLast(1) + listOf(soFar.programs.first() + remaining[0])
-            ), remaining.drop(1)) ?: buildProgram(path, BotProgram(
-                    soFar.programs + listOf(listOf(remaining[0]))
-            ), remaining.drop(1))
+            val programUsingLast = BotProgram(
+                    soFar.programs.dropLast(1) + listOf(soFar.programs.first() + remaining[0] + remaining[1])
+            )
+            val programUsingNew = BotProgram(
+                    soFar.programs + listOf(listOf(remaining[0], remaining[1]))
+            )
+            var candidate: BotProgram? = null
+            if (programUsingLast.programs.last().joinToString(",").length <= 20) {
+                candidate = buildProgram(path, programUsingLast, remaining.drop(2).removeMatching(programUsingLast))
+            }
+            if (candidate == null) {
+                candidate = buildProgram(path, programUsingNew, remaining.drop(2).removeMatching(programUsingNew))
+            }
+            candidate
+        }
+    }
+
+    private fun List<BotMovement>.removeMatching(program: BotProgram): List<BotMovement>
+            = program.programs.fold(this) { acc, p -> acc.removeMatching(p) }
+
+    private fun List<BotMovement>.removeMatching(program: List<BotMovement>): List<BotMovement> = when {
+        program.isEmpty() -> this
+        else -> {
+            var removed = this
+            var idx = removed.indexOf(program.first())
+            while (idx != -1 && (idx + program.size) <= removed.size) {
+                if (removed.subList(idx, idx + program.size) == program) {
+                    removed = removed.subList(0, idx) + removed.subList(idx + program.size, removed.size)
+                    idx = removed.indexOf(program.first())
+                } else {
+                    val relativeIdx = removed.subList(idx + 1, removed.size).indexOf(program.first())
+                    idx = if (relativeIdx >= 0) idx + relativeIdx + 1 else -1
+                }
+            }
+            removed
         }
     }
 }
@@ -107,14 +137,23 @@ private interface BotMovement
 
 private class TurnBotLeft : BotMovement {
     override fun toString() = "L"
+
+    override fun equals(other: Any?) = other is TurnBotLeft
+    override fun hashCode() = javaClass.hashCode()
 }
 
 private class TurnBotRight : BotMovement {
     override fun toString() = "R"
+
+    override fun equals(other: Any?) = other is TurnBotRight
+    override fun hashCode() = javaClass.hashCode()
 }
 
 private class MoveBotForward(val steps: Int) : BotMovement {
     override fun toString() = steps.toString()
+
+    override fun equals(other: Any?) = other is MoveBotForward && other.steps == steps
+    override fun hashCode() = steps
 }
 
 private enum class BotHeading(val movement: Pt) {
