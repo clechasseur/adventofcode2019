@@ -52,8 +52,8 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long, initialSta
     val done: Boolean
         get() = state == State.DONE
 
-    fun addInput(value: Long) {
-        input.add(value)
+    fun addInput(vararg values: Long) {
+        input.addAll(values.toList())
         if (state == State.WAITING_FOR_INPUT) {
             state = State.RUNNING
             run()
