@@ -32,7 +32,8 @@ object Day17 {
         }.takeWhile { it.isNotEmpty() }.toList()
 
         val path = buildPath(view)
-        val program = buildProgram(path).padded()
+        val minProgramSize = path.size / 2 / 3 - 1
+        val program = buildProgram(path, minProgramSize).padded()
 
         return 0L
     }
@@ -87,10 +88,14 @@ object Day17 {
 
     private fun inBounds(view: List<List<Char>>, pt: Pt) = pt.y in view.indices && pt.x in view[0].indices
 
-    private fun buildProgram(path: List<BotMovement>): BotProgram
-            = buildProgram(path, BotProgram(listOf(listOf(path.first(), path.drop(1).first()))), path.drop(2))!!
+    private fun buildProgram(path: List<BotMovement>, minProgramSize: Int): BotProgram {
+        return buildProgram(path, minProgramSize,
+                BotProgram(listOf(listOf(path.first(), path.drop(1).first()))), path.drop(2))!!
+    }
 
-    private fun buildProgram(path: List<BotMovement>, soFar: BotProgram, remaining: List<BotMovement>): BotProgram? = when {
+    private fun buildProgram(path: List<BotMovement>, minProgramSize: Int,
+                             soFar: BotProgram, remaining: List<BotMovement>): BotProgram? = when {
+
         soFar.programs.size > 3 -> null
         remaining.removeMatching(soFar).isEmpty() -> if (soFar.validFor(path)) soFar else null
         else -> {
@@ -100,12 +105,11 @@ object Day17 {
             val programUsingNew = BotProgram(
                     soFar.programs + listOf(listOf(remaining[0], remaining[1]))
             )
-            var candidate: BotProgram? = null
-            if (programUsingLast.programs.last().joinToString(",").length <= 20) {
-                candidate = buildProgram(path, programUsingLast, remaining.drop(2).removeMatching(programUsingLast))
-            }
-            if (candidate == null) {
-                candidate = buildProgram(path, programUsingNew, remaining.drop(2).removeMatching(programUsingNew))
+            var candidate = buildProgram(path, minProgramSize, programUsingLast,
+                    remaining.drop(2).removeMatching(programUsingLast))
+            if (candidate == null && programUsingNew.programs.dropLast(1).last().size < minProgramSize) {
+                candidate = buildProgram(path, minProgramSize, programUsingNew,
+                        remaining.drop(2).removeMatching(programUsingNew))
             }
             candidate
         }
