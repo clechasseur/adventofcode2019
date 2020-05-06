@@ -31,12 +31,12 @@ object Dijkstra {
         return Output(dist, prev)
     }
 
-    fun <T : Comparable<T>> assemblePath(prev: Map<T, T>, start: T, end: T): List<T> {
+    fun <T : Comparable<T>> assemblePath(prev: Map<T, T>, start: T, end: T): List<T>? {
         val path = mutableListOf<T>()
         var n = end
         while (n != start) {
             path.add(n)
-            n = prev[n] ?: error("Impossible to find path between $start and $end")
+            n = prev[n] ?: return null
         }
         return path.reversed()
     }

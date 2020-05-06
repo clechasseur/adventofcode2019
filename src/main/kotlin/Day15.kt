@@ -24,7 +24,7 @@ object Day15 {
         val passable = mutableSetOf<Pt>()
         val oxygen = explore(computer, Pt.ZERO, passable)!!
         val pathfinding = Dijkstra.build(PassableGraph(passable), Pt.ZERO)
-        return Dijkstra.assemblePath(pathfinding.prev, Pt.ZERO, oxygen).size
+        return Dijkstra.assemblePath(pathfinding.prev, Pt.ZERO, oxygen)!!.size
     }
 
     fun part2(): Int {
