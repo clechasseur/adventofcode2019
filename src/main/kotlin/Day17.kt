@@ -5,6 +5,8 @@ import org.clechasseur.adventofcode2019.Pt
 object Day17 {
     private val input = Day17Data.input
 
+    private val programNames = listOf("A", "B", "C")
+
     fun part1(): Int {
         val view = IntcodeComputer(input).readAllOutput().joinToString("") {
             it.toChar().toString()
@@ -32,10 +34,15 @@ object Day17 {
         }.takeWhile { it.isNotEmpty() }.toList()
 
         val path = buildPath(view)
-        val minProgramSize = path.size / 2 / 3 - 1
-        val program = buildProgram(path, minProgramSize).padded()
+        val program = buildProgram(path).padded()
+        val mainRoutine = replaceWithPrograms(path, program).joinToString(",").map { it.toLong() } + 10
+        val subPrograms = program.programs.map { prog -> prog.joinToString(",").map { it.toLong() } + 10 }
+        robot.addInput(*mainRoutine.toLongArray())
+        subPrograms.forEach { robot.addInput(*it.toLongArray()) }
+        robot.addInput('n'.toLong(), 10)
 
-        return 0L
+        val output = robot.readAllOutput()
+        return output.last()
     }
 
     private fun isScaffoldIntersection(x: Int, y: Int, view: List<List<Char>>): Boolean
@@ -88,56 +95,62 @@ object Day17 {
 
     private fun inBounds(view: List<List<Char>>, pt: Pt) = pt.y in view.indices && pt.x in view[0].indices
 
-    private fun buildProgram(path: List<BotMovement>, minProgramSize: Int): BotProgram {
-        return buildProgram(path, minProgramSize,
-                BotProgram(listOf(listOf(path.first(), path.drop(1).first()))), path.drop(2))!!
-    }
+    private fun buildProgram(path: List<BotMovement>) = buildProgram(path, BotProgram(listOf(emptyList())), path)!!
 
-    private fun buildProgram(path: List<BotMovement>, minProgramSize: Int,
-                             soFar: BotProgram, remaining: List<BotMovement>): BotProgram? = when {
-
-        soFar.programs.size > 3 -> null
-        remaining.removeMatching(soFar).isEmpty() -> if (soFar.validFor(path)) soFar else null
-        else -> {
-            val programUsingLast = BotProgram(
-                    soFar.programs.dropLast(1) + listOf(soFar.programs.first() + remaining[0] + remaining[1])
-            )
-            val programUsingNew = BotProgram(
-                    soFar.programs + listOf(listOf(remaining[0], remaining[1]))
-            )
-            var candidate = buildProgram(path, minProgramSize, programUsingLast,
-                    remaining.drop(2).removeMatching(programUsingLast))
-            if (candidate == null && programUsingNew.programs.dropLast(1).last().size < minProgramSize) {
-                candidate = buildProgram(path, minProgramSize, programUsingNew,
-                        remaining.drop(2).removeMatching(programUsingNew))
-            }
-            candidate
+    private fun buildProgram(path: List<BotMovement>, soFar: BotProgram, remaining: List<BotMovement>): BotProgram? {
+        val firstCandidateIdx = remaining.indexOfFirst { !it.minified }
+        if (firstCandidateIdx == -1) {
+            return if (soFar.validFor(path)) soFar else null
         }
+        val inCurrent = BotProgram(soFar.programs.dropLast(1)
+                + listOf(soFar.programs.last() + remaining[firstCandidateIdx] + remaining[firstCandidateIdx + 1]))
+        val remainingInCurrent = replaceWithPrograms(path, inCurrent)
+        if (remainingInCurrent != remaining && inCurrent.programs.last().joinToString(",").length <= 20) {
+            val inCurrentCandidate = buildProgram(path, inCurrent, remainingInCurrent)
+            if (inCurrentCandidate != null) {
+                return inCurrentCandidate
+            }
+        }
+        if (soFar.programs.size < 3 && soFar.programs.last().isNotEmpty()) {
+            val inNew = BotProgram(soFar.programs
+                    + listOf(listOf(remaining[firstCandidateIdx], remaining[firstCandidateIdx + 1])))
+            val remainingInNew = replaceWithPrograms(path, inNew)
+            if (remainingInNew != remaining) {
+                return buildProgram(path, inNew, remainingInNew)
+            }
+        }
+        return null
     }
 
-    private fun List<BotMovement>.removeMatching(program: BotProgram): List<BotMovement>
-            = program.programs.fold(this) { acc, p -> acc.removeMatching(p) }
-
-    private fun List<BotMovement>.removeMatching(program: List<BotMovement>): List<BotMovement> = when {
-        program.isEmpty() -> this
-        else -> {
-            var removed = this
-            var idx = removed.indexOf(program.first())
-            while (idx != -1 && (idx + program.size) <= removed.size) {
-                if (removed.subList(idx, idx + program.size) == program) {
-                    removed = removed.subList(0, idx) + removed.subList(idx + program.size, removed.size)
-                    idx = removed.indexOf(program.first())
-                } else {
-                    val relativeIdx = removed.subList(idx + 1, removed.size).indexOf(program.first())
-                    idx = if (relativeIdx >= 0) idx + relativeIdx + 1 else -1
+    private fun replaceWithPrograms(path: List<BotMovement>, program: BotProgram): List<BotMovement> {
+        var remaining = path.toMutableList()
+        program.programs.forEachIndexed { progIdx, prog ->
+            val matches = mutableListOf<Int>()
+            remaining.forEachIndexed { idx, movement ->
+                if ((matches.isEmpty() || idx >= matches.last() + prog.size)
+                        && movement == prog[0] && remaining.drop(idx).take(prog.size) == prog) {
+                    matches.add(idx)
                 }
             }
-            removed
+            if (matches.isNotEmpty()) {
+                val newRemaining = remaining.take(matches[0]).toMutableList()
+                matches.zipWithNext().forEach { (idx, nextIdx) ->
+                    newRemaining.add(HaveBotExecuteProgram(programNames[progIdx]))
+                    newRemaining.addAll(remaining.drop(idx + prog.size).take(nextIdx - idx - prog.size))
+                }
+                newRemaining.add(HaveBotExecuteProgram(programNames[progIdx]))
+                newRemaining.addAll(remaining.drop(matches.last() + prog.size))
+                remaining = newRemaining
+            }
         }
+        return remaining
     }
 }
 
-private interface BotMovement
+private interface BotMovement {
+    val minified: Boolean
+        get() = false
+}
 
 private class TurnBotLeft : BotMovement {
     override fun toString() = "L"
@@ -158,6 +171,16 @@ private class MoveBotForward(val steps: Int) : BotMovement {
 
     override fun equals(other: Any?) = other is MoveBotForward && other.steps == steps
     override fun hashCode() = steps
+}
+
+private class HaveBotExecuteProgram(val programName: String) : BotMovement {
+    override val minified: Boolean
+        get() = true
+
+    override fun toString() = programName
+
+    override fun equals(other: Any?) = other is HaveBotExecuteProgram && other.programName == programName
+    override fun hashCode() = programName.hashCode()
 }
 
 private enum class BotHeading(val movement: Pt) {
@@ -181,7 +204,7 @@ private enum class BotHeading(val movement: Pt) {
     }
 }
 
-private data class BotProgram(val programs: List<List<BotMovement>>) {
+private class BotProgram(val programs: List<List<BotMovement>>) {
     fun buildFor(path: List<BotMovement>): String {
         val a = (programs.firstOrNull() ?: emptyList()).joinToString(",")
         val b = (programs.drop(1).firstOrNull() ?: emptyList()).joinToString(",")
@@ -192,7 +215,12 @@ private data class BotProgram(val programs: List<List<BotMovement>>) {
     fun validFor(path: List<BotMovement>): Boolean
             = programs.size <= 3
             && programs.all { it.joinToString(",").length <= 20 }
-            && buildFor(path).matches(Regex("""^(?:A|B|C|,)*$"""))
+            && buildIsValidFor(path)
 
     fun padded() = BotProgram((programs + List(3) { emptyList<BotMovement>() }).take(3))
+
+    private fun buildIsValidFor(path: List<BotMovement>): Boolean {
+        val build = buildFor(path)
+        return build.length <= 20 && build.matches(Regex("""^(?:A|B|C|,)*$"""))
+    }
 }
