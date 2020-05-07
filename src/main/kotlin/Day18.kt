@@ -1,6 +1,7 @@
 import org.clechasseur.adventofcode2019.Pt
 import org.clechasseur.adventofcode2019.dij.Dijkstra
 import org.clechasseur.adventofcode2019.dij.Graph
+import kotlin.math.min
 
 object Day18 {
     private val input = """
@@ -92,28 +93,32 @@ object Day18 {
     }.flatten().toMap()
     private val startPos = startingLabyrinth.filter { it.value == '@' }.keys.first()
 
-    fun part1() = getKeys("", from = startPos, labyrinth = startingLabyrinth)
+    fun part1() = getKeys(from = startPos, labyrinth = startingLabyrinth)
 
-    private fun getKeys(s: String, from: Pt, labyrinth: Map<Pt, Char>, soFar: Long = 0): Long {
-        if (labyrinth.filter { it.value.isLowerCase() }.isEmpty()) {
-            println(s)
+    private fun getKeys(from: Pt, labyrinth: Map<Pt, Char>, soFar: Long = 0,
+                        shortestSoFar: Long = Long.MAX_VALUE, keyPath: String = ""): Long {
+
+        val keys = labyrinth.filter { it.value.isLowerCase() }
+        if (keys.isEmpty()) {
+            println("WINNER ($soFar steps): $keyPath")
             return soFar
         }
-        val passable = explore(LabyrinthGraph(labyrinth), from)
-        val passableLabyrinth = labyrinth.filterKeys { passable.contains(it) }
-        val (dist, _) = Dijkstra.build(LabyrinthGraph(passableLabyrinth), from)
-        return passableLabyrinth.filter { it.value.isLowerCase() }.map { (keyPos, key) ->
-            when (val distToKey = dist[keyPos]) {
-                null, Long.MAX_VALUE -> Long.MAX_VALUE
-                else -> {
-                    val newLabyrinth = labyrinth.map { when (it.value) {
+        val (dist, _) = Dijkstra.build(LabyrinthGraph(labyrinth), from)
+        var shortest = shortestSoFar
+        for ((keyPos, key) in keys.asSequence().sortedBy { dist[it.key] }) {
+            val distToKey = dist[keyPos]
+            if (distToKey != null && distToKey != Long.MAX_VALUE && soFar + distToKey < shortest) {
+                val newLabyrinth = labyrinth.map {
+                    when (it.value) {
                         key, key.toUpperCase() -> it.key to '.'
                         else -> it.key to it.value
-                    } }.toMap()
-                    getKeys("$s -> $key", keyPos, newLabyrinth, soFar + distToKey)
-                }
+                    }
+                }.toMap()
+                shortest = min(shortest, getKeys(keyPos, newLabyrinth, soFar + distToKey,
+                        shortest, "$keyPath -> $key"))
             }
-        }.min() ?: Long.MAX_VALUE
+        }
+        return shortest
     }
 
     private fun explore(graph: Graph<Pt>, pt: Pt): Set<Pt> {
