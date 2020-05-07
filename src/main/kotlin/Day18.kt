@@ -92,11 +92,17 @@ object Day18 {
     }.flatten().toMap()
     private val startPos = startingLabyrinth.filter { it.value == '@' }.keys.first()
 
-    fun part1() = getKeys(from = startPos, labyrinth = startingLabyrinth)
+    fun part1() = getKeys("", from = startPos, labyrinth = startingLabyrinth)
 
-    private fun getKeys(from: Pt, labyrinth: Map<Pt, Char>, soFar: Long = 0): Long {
-        val (dist, _) = Dijkstra.build(LabyrinthGraph(labyrinth), from)
-        return labyrinth.filter { it.value.isLowerCase() }.map { (keyPos, key) ->
+    private fun getKeys(s: String, from: Pt, labyrinth: Map<Pt, Char>, soFar: Long = 0): Long {
+        if (labyrinth.filter { it.value.isLowerCase() }.isEmpty()) {
+            println(s)
+            return soFar
+        }
+        val passable = explore(LabyrinthGraph(labyrinth), from)
+        val passableLabyrinth = labyrinth.filterKeys { passable.contains(it) }
+        val (dist, _) = Dijkstra.build(LabyrinthGraph(passableLabyrinth), from)
+        return passableLabyrinth.filter { it.value.isLowerCase() }.map { (keyPos, key) ->
             when (val distToKey = dist[keyPos]) {
                 null, Long.MAX_VALUE -> Long.MAX_VALUE
                 else -> {
@@ -104,10 +110,23 @@ object Day18 {
                         key, key.toUpperCase() -> it.key to '.'
                         else -> it.key to it.value
                     } }.toMap()
-                    getKeys(keyPos, newLabyrinth, soFar + distToKey)
+                    getKeys("$s -> $key", keyPos, newLabyrinth, soFar + distToKey)
                 }
             }
         }.min() ?: Long.MAX_VALUE
+    }
+
+    private fun explore(graph: Graph<Pt>, pt: Pt): Set<Pt> {
+        val passable = mutableSetOf<Pt>()
+        explore(graph, pt, passable)
+        return passable
+    }
+
+    private fun explore(graph: Graph<Pt>, pt: Pt, passable: MutableSet<Pt>) {
+        if (!passable.contains(pt)) {
+            passable.add(pt)
+            graph.neighbours(pt).forEach { explore(graph, it, passable) }
+        }
     }
 
     private class LabyrinthGraph(private val labyrinth: Map<Pt, Char>) : Graph<Pt> {

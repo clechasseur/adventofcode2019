@@ -6,14 +6,10 @@ object Dijkstra {
     fun <T : Comparable<T>> build(graph: Graph<T>, start: T): Output<T> {
         // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
 
-        val q = mutableSetOf<T>()
-        val dist = mutableMapOf<T, Long>()
+        val field = graph.allPassable() + start
+        val q = field.toMutableSet()
+        val dist = field.asSequence().map { it to Long.MAX_VALUE }.toMap().toMutableMap()
         val prev = mutableMapOf<T, T>()
-
-        (graph.allPassable() + start).forEach { node ->
-            dist[node] = Long.MAX_VALUE
-            q.add(node)
-        }
         dist[start] = 0L
 
         while (q.isNotEmpty()) {
