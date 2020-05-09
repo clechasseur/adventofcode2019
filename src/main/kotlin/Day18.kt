@@ -88,65 +88,90 @@ object Day18 {
         #################################################################################
     """.trimIndent()
 
-    private val startingLabyrinth = input.lineSequence().mapIndexed {
-        y, line -> line.mapIndexed { x, c -> Pt(x, y) to c }
-    }.flatten().toMap()
-    private val startPos = startingLabyrinth.filter { it.value == '@' }.keys.first()
+    fun part1(): Long {
+        val labyrinth = input.lineSequence().mapIndexed {
+            y, line -> line.mapIndexed { x, c -> Pt(x, y) to c }
+        }.flatten().toMap()
+        val interesting = labyrinth.filter { it.value == '@' || it.value.isLetter() }
+        val graph = mutableMapOf<Pt, MutableMap<Pt, Long>>()
+        interesting.map { (pos, c) ->
+            val (dist, _) = Dijkstra.build(LabyrinthGraph(labyrinth, pos), pos)
+            interesting.filter { it.value != c }.forEach { (subPos, _) ->
+                val subDist = dist[subPos]
+                if (subDist != null && subDist != Long.MAX_VALUE) {
+                    graph.getOrPut(pos) { mutableMapOf() }[subPos] = subDist
+                }
+            }
+        }
+        return getKeys(interesting.filter { it.value == '@' }.keys.single(), labyrinth, graph)
+    }
 
-    fun part1() = getKeys(from = startPos, labyrinth = startingLabyrinth)
+    private fun getKeys(from: Pt, labyrinth: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>,
+                        soFar: Long = 0L, shortestSoFar: Long = Long.MAX_VALUE,
+                        keys: List<Char> = emptyList()): Long {
 
-    private fun getKeys(from: Pt, labyrinth: Map<Pt, Char>, soFar: Long = 0,
-                        shortestSoFar: Long = Long.MAX_VALUE, keyPath: String = ""): Long {
-
-        val keys = labyrinth.filter { it.value.isLowerCase() }
-        if (keys.isEmpty()) {
-            println("WINNER ($soFar steps): $keyPath")
+        if (keys.size == 26) {
+            println("$soFar steps: ${keys.joinToString(" -> ")}")
             return soFar
         }
-        val (dist, _) = Dijkstra.build(LabyrinthGraph(labyrinth), from)
+        val keysSet = keys.toSet()
+        val (dist, _) = Dijkstra.build(LabyrinthGraphGraph(labyrinth, graph, keysSet), from)
+        val distToNewKeys = dist.filter {
+            val key = labyrinth[it.key] ?: error("Unknown pos")
+            it.value != Long.MAX_VALUE && key.isLowerCase() && !keysSet.contains(key)
+        }
         var shortest = shortestSoFar
-        for ((keyPos, key) in keys.asSequence().sortedBy { dist[it.key] }) {
-            val distToKey = dist[keyPos]
-            if (distToKey != null && distToKey != Long.MAX_VALUE && soFar + distToKey < shortest) {
-                val newLabyrinth = labyrinth.map {
-                    when (it.value) {
-                        key, key.toUpperCase() -> it.key to '.'
-                        else -> it.key to it.value
-                    }
-                }.toMap()
-                shortest = min(shortest, getKeys(keyPos, newLabyrinth, soFar + distToKey,
-                        shortest, "$keyPath -> $key"))
+        for ((keyPos, keyDist) in distToNewKeys) {
+            if (soFar + keyDist < shortest) {
+                val key = labyrinth[keyPos] ?: error("Unknown pos")
+                shortest = min(shortest, getKeys(keyPos, labyrinth, graph, soFar + keyDist, shortest, keys + key))
             }
         }
         return shortest
     }
 
-    private fun explore(graph: Graph<Pt>, pt: Pt): Set<Pt> {
-        val passable = mutableSetOf<Pt>()
-        explore(graph, pt, passable)
-        return passable
-    }
+    private val directions = listOf(Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1))
 
-    private fun explore(graph: Graph<Pt>, pt: Pt, passable: MutableSet<Pt>) {
-        if (!passable.contains(pt)) {
-            passable.add(pt)
-            graph.neighbours(pt).forEach { explore(graph, it, passable) }
-        }
-    }
+    private class LabyrinthGraph(private val labyrinth: Map<Pt, Char>, private val start: Pt) : Graph<Pt> {
+        private val passable = labyrinth.asSequence().filter {
+            it.value == '@' || it.value == '.' || it.value.isLetter()
+        }.map { it.key }.toList()
 
-    private class LabyrinthGraph(private val labyrinth: Map<Pt, Char>) : Graph<Pt> {
-        companion object {
-            private val directions = listOf(Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1))
-        }
-
-        override fun allPassable(): List<Pt>
-                = labyrinth.filter { it.value != '#' && !it.value.isUpperCase() }.keys.toList()
+        override fun allPassable(): List<Pt> = passable
 
         override fun neighbours(node: Pt): List<Pt> = directions.map { it + node }.filter {
-            val type = labyrinth[it]
-            type != null && type != '#' && !type.isUpperCase()
+            val srcType = labyrinth[node] ?: error("Source node must be known")
+            val destType = labyrinth[it]
+            (!srcType.isUpperCase() || node == start) && destType != null && destType != '#'
         }
 
-        override fun dist(a: Pt, b: Pt): Long = 1
+        override fun dist(a: Pt, b: Pt): Long = 1L
+    }
+
+    private class LabyrinthGraphGraph(private val labyrinth: Map<Pt, Char>,
+                                      private val graph: Map<Pt, Map<Pt, Long>>,
+                                      private val keys: Set<Char>) : Graph<Pt> {
+
+        override fun allPassable(): List<Pt> = graph.keys.toList()
+
+        override fun neighbours(node: Pt): List<Pt> {
+            val n = mutableSetOf<Pt>()
+            getNeighbours(node, n)
+            return n.toList()
+        }
+
+        override fun dist(a: Pt, b: Pt): Long = graph[a]?.get(b) ?: error("Unknowable dist")
+
+        private fun getNeighbours(node: Pt, n: MutableSet<Pt>) {
+            if (!n.contains(node)) {
+                graph[node]?.forEach { (neighbour, _) ->
+                    n.add(neighbour)
+                    val c = labyrinth[neighbour] ?: error("Unknown neighbour")
+                    if (c.isLowerCase() || keys.contains(c.toLowerCase())) {
+                        getNeighbours(neighbour, n)
+                    }
+                }
+            }
+        }
     }
 }
