@@ -1,4 +1,8 @@
 import org.clechasseur.adventofcode2019.IntcodeComputer
+import org.clechasseur.adventofcode2019.Pt
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.round
 
 object Day19 {
     private val input = listOf<Long>(109,424,203,1,21102,11,1,0,1105,1,282,21102,1,18,0,1105,1,259,1201,1,0,221,203,1,
@@ -24,20 +28,42 @@ object Day19 {
     }.count { it == 1 }
 
     fun part2(): Int {
-        print("   ")
-        (0 until 100).forEach { print(it % 10) }
-        println()
-        (0 until 100).forEach { y ->
-            print("%3d".format(y))
-            (0 until 100).forEach { x ->
-                val whether = IntcodeComputer(input, x.toLong(), y.toLong()).readOutput().toInt()
-                print(if (whether == 1) '#' else '.')
-            }
-            println()
-        }
+//        print("   ")
+//        (0 until 100).forEach { print(it % 10) }
+//        println()
+//        (0 until 100).forEach { y ->
+//            print("%3d".format(y))
+//            (0 until 100).forEach { x ->
+//                val whether = IntcodeComputer(input, x.toLong(), y.toLong()).readOutput().toInt()
+//                print(if (whether == 1) '#' else '.')
+//            }
+//            println()
+//        }
         // 2x2 -> (21, 18)
         // 3x3 -> (35, 30)
         // 4x4 -> (50, 43)
-        return 0
+        val ratio = 21.0 / 18.0
+        val topLeft = generateSequence(50.0 to 43.0) { (_, y) ->
+            val newY = y + 1.0
+            (newY * ratio) to newY
+        }/*.filter { (_, y) ->
+            val closestY = round(y)
+            abs(y - closestY) < 0.1
+        }*/.map { (x, y) ->
+            Pt(round(x).toInt(), round(y).toInt())
+        }.dropWhile {
+            biggestSquare(it) < 100
+        }.first()
+        return topLeft.x * 10_000 + topLeft.y
     }
+
+    private fun biggestSquare(topLeft: Pt): Int = min(verticalLineLength(topLeft), horizontalLineLength(topLeft))
+
+    private fun verticalLineLength(pt: Pt): Int = generateSequence(pt) { Pt(it.x, it.y + 1) }.map {
+        IntcodeComputer(input, it.x.toLong(), it.y.toLong()).readOutput().toInt()
+    }.takeWhile { it == 1 }.count()
+
+    private fun horizontalLineLength(pt: Pt): Int = generateSequence(pt) { Pt(it.x + 1, it.y) }.map {
+        IntcodeComputer(input, it.x.toLong(), it.y.toLong()).readOutput().toInt()
+    }.takeWhile { it == 1 }.count()
 }
