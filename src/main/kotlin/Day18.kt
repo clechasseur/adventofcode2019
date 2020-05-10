@@ -3,7 +3,7 @@ import org.clechasseur.adventofcode2019.dij.Dijkstra
 import org.clechasseur.adventofcode2019.dij.Graph
 
 object Day18 {
-    private val input = """
+    private fun inputTemplate(one: String, two: String, three: String) = """
         #################################################################################
         #.....#...........#....s..#.....#.......#...#...#...#...#.......#...........#...#
         #.#.#.#####.#.#####.#####.#.#####.#####.#.#.#.#.#.###.#.#.#.###.#.#.#########.#.#
@@ -43,9 +43,9 @@ object Day18 {
         #.#.#F#.#######.###.#.#########.#####.###.#.###.#########.#####.#.#############.#
         #.#.#.#.......#...#...#.........#...#...#.#...#.....#.#...#...#...#...#...#...U.#
         #.#.#.###########.###############.#.###.#.#######.#.#.#.###.#.#####.#.#.#.#.###.#
-        #...#.............................#...............#...#.....#..q....#...#..r#...#
-        #######################################.@.#######################################
-        #.........#.....#.........#.........#.........#...........#.........#.........#.#
+        #...#.............................#....${one}........#...#.....#..q....#...#..r#...#
+        #######################################${two}#######################################
+        #.........#.....#.........#.........#..${three}....#...........#.........#.........#.#
         #.#######.#.#.###.#####.#.#####.###.#.#.#.#####.###.#######.#####.###.###.###.#G#
         #.#.....#.#.#.......#...#.......#.#.#.#.#.#.....#.#.......#.#.....#.A...#...#...#
         #.#.###.#.###.#######.###########.#.###.#.#.#####.#######.#.#.#####.#######.###.#
@@ -87,9 +87,14 @@ object Day18 {
         #################################################################################
     """.trimIndent()
 
-    fun part1(): Long = minPath.steps
+    private val input1 = inputTemplate("...", ".@.", "...")
+    private val input2 = inputTemplate("@#@", "###", "@#@")
 
-    private val minPath: KeyPath by lazy {
+    fun part1(): Long = getMinPath(input1).steps
+
+    fun part2(): Long = getMinPath(input2).steps
+
+    private fun getMinPath(input: String): KeyPath {
         val labyrinth = input.lineSequence().mapIndexed {
             y, line -> line.mapIndexed { x, c -> Pt(x, y) to c }
         }.flatten().toMap()
@@ -104,20 +109,26 @@ object Day18 {
                 }
             }
         }
+        val robots = interesting.filter { it.value == '@' }.keys.toList()
 
-        var paths = setOf(KeyPath(listOf('@'), 0L))
-        while (paths.map { it.keys.size }.max()!! < 27) {
+        var paths = setOf(KeyPath(robots, emptyList(), 0L))
+        while (paths.map { it.keys.size }.max()!! < 26) {
             paths = forward(paths, interesting, graph)
         }
-        paths.minBy { it.steps }!!
+        return paths.minBy { it.steps }!!
     }
 
     private fun forward(paths: Set<KeyPath>, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>): Set<KeyPath> {
         return paths.flatMap { path ->
-            val nextKeys = mutableMapOf<Char, Long>()
-            getNextKeys(path.keys.last(), path, interesting, graph, nextKeys)
-            nextKeys.filterNot { it.key.isUpperCase() }.map { (key, dist) ->
-                KeyPath(path.keys + key, path.steps + dist)
+            path.robots.flatMap { robotPos ->
+                val nextKeys = mutableMapOf<Pt, Long>()
+                getNextKeys(robotPos, path, interesting, graph, nextKeys)
+                nextKeys.filterNot { interesting[it.key]!!.isUpperCase() }.map { (keyPos, dist) ->
+                    val robotIdx = path.robots.indexOf(robotPos)
+                    val newRobots = path.robots.toMutableList()
+                    newRobots[robotIdx] = keyPos
+                    KeyPath(newRobots, path.keys + interesting[keyPos]!!, path.steps + dist)
+                }
             }
         }.fold(mutableMapOf<KeyPath, Long>()) { acc, path ->
             val existingSteps = acc[path]
@@ -129,19 +140,18 @@ object Day18 {
         }.keys
     }
 
-    private fun getNextKeys(from: Char, path: KeyPath, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>,
-                            keys: MutableMap<Char, Long>, distSoFar: Long = 0) {
+    private fun getNextKeys(from: Pt, path: KeyPath, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>,
+                            keys: MutableMap<Pt, Long>, distSoFar: Long = 0) {
 
-        val fromPos = interesting.asSequence().filter { it.value == from }.single().key
-        graph[fromPos]?.forEach { (pos, dist) ->
+        graph[from]?.forEach { (pos, dist) ->
             val feature = interesting[pos] ?: error("Unknown pos")
             if (feature.isLetter() && !path.keysSet.contains(feature)) {
-                val existingDist = keys[feature]
+                val existingDist = keys[pos]
                 if (existingDist == null || dist + distSoFar < existingDist) {
-                    keys.remove(feature)
-                    keys[feature] = dist + distSoFar
+                    keys.remove(pos)
+                    keys[pos] = dist + distSoFar
                     if (feature.isUpperCase() && path.keysSet.contains(feature.toLowerCase())) {
-                        getNextKeys(feature, path, interesting, graph, keys, dist + distSoFar)
+                        getNextKeys(pos, path, interesting, graph, keys, dist + distSoFar)
                     }
                 }
             }
@@ -168,15 +178,15 @@ object Day18 {
         override fun dist(a: Pt, b: Pt): Long = 1L
     }
 
-    private class KeyPath(val keys: List<Char>, val steps: Long) {
+    private class KeyPath(val robots: List<Pt>, val keys: List<Char>, val steps: Long) {
         val keysSet = keys.toSet()
 
         override fun equals(other: Any?): Boolean
-                = other is KeyPath && other.keysSet == keysSet && other.keys.last() == keys.last()
+                = other is KeyPath && other.keysSet == keysSet && other.robots == robots
 
         override fun hashCode(): Int {
             var result = keysSet.hashCode()
-            result = 31 * result + keys.last().hashCode()
+            result = 31 * result + robots.hashCode()
             return result
         }
 
