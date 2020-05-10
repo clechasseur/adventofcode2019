@@ -1,7 +1,6 @@
 import org.clechasseur.adventofcode2019.Pt
 import org.clechasseur.adventofcode2019.dij.Dijkstra
 import org.clechasseur.adventofcode2019.dij.Graph
-import kotlin.math.min
 
 object Day18 {
     private val input = """
@@ -103,36 +102,53 @@ object Day18 {
                 }
             }
         }
-        return getKeys(interesting.filter { it.value == '@' }.keys.single(), labyrinth, graph)
+
+        var paths = setOf(KeyPath(listOf('@'), 0L))
+        while (paths.map { it.keys.size }.max()!! < 27) {
+            paths = forward(paths, interesting, graph)
+        }
+        val minPath = paths.minBy { it.steps }!!
+        println(minPath)
+        return minPath.steps
     }
 
-    private fun getKeys(from: Pt, labyrinth: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>,
-                        soFar: Long = 0L, shortestSoFar: Long = Long.MAX_VALUE,
-                        keys: List<Char> = emptyList()): Long {
+    private fun forward(paths: Set<KeyPath>, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>): Set<KeyPath> {
+        return paths.flatMap { path ->
+            val nextKeys = mutableMapOf<Char, Long>()
+            getNextKeys(path.keys.last(), path, interesting, graph, nextKeys)
+            nextKeys.filterNot { it.key.isUpperCase() }.map { (key, dist) ->
+                KeyPath(path.keys + key, path.steps + dist)
+            }
+        }.fold(mutableMapOf<KeyPath, Long>()) { acc, path ->
+            val existingSteps = acc[path]
+            if (existingSteps == null || path.steps < existingSteps) {
+                acc.remove(path)
+                acc[path] = path.steps
+            }
+            acc
+        }.keys
+    }
 
-        if (keys.size == 26) {
-            println("$soFar steps: ${keys.joinToString(" -> ")}")
-            return soFar
-        }
-        val keysSet = keys.toSet()
-        val (dist, _) = Dijkstra.build(LabyrinthGraphGraph(labyrinth, graph, keysSet), from)
-        val distToNewKeys = dist.filter {
-            val key = labyrinth[it.key] ?: error("Unknown pos")
-            it.value != Long.MAX_VALUE && key.isLowerCase() && !keysSet.contains(key)
-        }
-        var shortest = shortestSoFar
-        for ((keyPos, keyDist) in distToNewKeys) {
-            if (soFar + keyDist < shortest) {
-                val key = labyrinth[keyPos] ?: error("Unknown pos")
-                shortest = min(shortest, getKeys(keyPos, labyrinth, graph, soFar + keyDist, shortest, keys + key))
+    private fun getNextKeys(from: Char, path: KeyPath, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>,
+                            keys: MutableMap<Char, Long>, distSoFar: Long = 0) {
+
+        val fromPos = interesting.asSequence().filter { it.value == from }.single().key
+        graph[fromPos]?.forEach { (pos, dist) ->
+            val feature = interesting[pos] ?: error("Unknown pos")
+            if (feature.isLetter() && !keys.containsKey(feature) && !path.keysSet.contains(feature)) {
+                keys[feature] = dist + distSoFar
+                if (feature.isUpperCase() && path.keysSet.contains(feature.toLowerCase())) {
+                    getNextKeys(feature, path, interesting, graph, keys, dist + distSoFar)
+                }
             }
         }
-        return shortest
     }
 
-    private val directions = listOf(Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1))
-
     private class LabyrinthGraph(private val labyrinth: Map<Pt, Char>, private val start: Pt) : Graph<Pt> {
+        companion object {
+            private val directions = listOf(Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1))
+        }
+
         private val passable = labyrinth.asSequence().filter {
             it.value == '@' || it.value == '.' || it.value.isLetter()
         }.map { it.key }.toList()
@@ -148,30 +164,18 @@ object Day18 {
         override fun dist(a: Pt, b: Pt): Long = 1L
     }
 
-    private class LabyrinthGraphGraph(private val labyrinth: Map<Pt, Char>,
-                                      private val graph: Map<Pt, Map<Pt, Long>>,
-                                      private val keys: Set<Char>) : Graph<Pt> {
+    private class KeyPath(val keys: List<Char>, val steps: Long) {
+        val keysSet = keys.toSet()
 
-        override fun allPassable(): List<Pt> = graph.keys.toList()
+        override fun equals(other: Any?): Boolean
+                = other is KeyPath && other.keysSet == keysSet && other.keys.last() == keys.last()
 
-        override fun neighbours(node: Pt): List<Pt> {
-            val n = mutableSetOf<Pt>()
-            getNeighbours(node, n)
-            return n.toList()
+        override fun hashCode(): Int {
+            var result = keysSet.hashCode()
+            result = 31 * result + keys.last().hashCode()
+            return result
         }
 
-        override fun dist(a: Pt, b: Pt): Long = graph[a]?.get(b) ?: error("Unknowable dist")
-
-        private fun getNeighbours(node: Pt, n: MutableSet<Pt>) {
-            if (!n.contains(node)) {
-                graph[node]?.forEach { (neighbour, _) ->
-                    n.add(neighbour)
-                    val c = labyrinth[neighbour] ?: error("Unknown neighbour")
-                    if (c.isLowerCase() || keys.contains(c.toLowerCase())) {
-                        getNeighbours(neighbour, n)
-                    }
-                }
-            }
-        }
+        override fun toString(): String = "$steps steps: ${keys.joinToString()}"
     }
 }
