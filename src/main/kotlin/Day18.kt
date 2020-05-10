@@ -87,7 +87,9 @@ object Day18 {
         #################################################################################
     """.trimIndent()
 
-    fun part1(): Long {
+    fun part1(): Long = minPath.steps
+
+    private val minPath: KeyPath by lazy {
         val labyrinth = input.lineSequence().mapIndexed {
             y, line -> line.mapIndexed { x, c -> Pt(x, y) to c }
         }.flatten().toMap()
@@ -107,9 +109,7 @@ object Day18 {
         while (paths.map { it.keys.size }.max()!! < 27) {
             paths = forward(paths, interesting, graph)
         }
-        val minPath = paths.minBy { it.steps }!!
-        println(minPath)
-        return minPath.steps
+        paths.minBy { it.steps }!!
     }
 
     private fun forward(paths: Set<KeyPath>, interesting: Map<Pt, Char>, graph: Map<Pt, Map<Pt, Long>>): Set<KeyPath> {
@@ -135,10 +135,14 @@ object Day18 {
         val fromPos = interesting.asSequence().filter { it.value == from }.single().key
         graph[fromPos]?.forEach { (pos, dist) ->
             val feature = interesting[pos] ?: error("Unknown pos")
-            if (feature.isLetter() && !keys.containsKey(feature) && !path.keysSet.contains(feature)) {
-                keys[feature] = dist + distSoFar
-                if (feature.isUpperCase() && path.keysSet.contains(feature.toLowerCase())) {
-                    getNextKeys(feature, path, interesting, graph, keys, dist + distSoFar)
+            if (feature.isLetter() && !path.keysSet.contains(feature)) {
+                val existingDist = keys[feature]
+                if (existingDist == null || dist + distSoFar < existingDist) {
+                    keys.remove(feature)
+                    keys[feature] = dist + distSoFar
+                    if (feature.isUpperCase() && path.keysSet.contains(feature.toLowerCase())) {
+                        getNextKeys(feature, path, interesting, graph, keys, dist + distSoFar)
+                    }
                 }
             }
         }
