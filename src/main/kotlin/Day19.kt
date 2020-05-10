@@ -1,5 +1,6 @@
 import org.clechasseur.adventofcode2019.IntcodeComputer
 import org.clechasseur.adventofcode2019.Pt
+import org.clechasseur.adventofcode2019.manhattan
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.round
@@ -22,48 +23,45 @@ object Day19 {
             21202,1,1,-4,109,-5,2106,0,0)
 
     fun part1() = (0 until 50).flatMap { y ->
-        (0 until 50).map { x ->
-            IntcodeComputer(input, x.toLong(), y.toLong()).readOutput().toInt()
-        }
-    }.count { it == 1 }
+        (0 until 50).map { x -> isInBeam(Pt(x, y)) }
+    }.count { it }
 
     fun part2(): Int {
-//        print("   ")
-//        (0 until 100).forEach { print(it % 10) }
-//        println()
-//        (0 until 100).forEach { y ->
-//            print("%3d".format(y))
-//            (0 until 100).forEach { x ->
-//                val whether = IntcodeComputer(input, x.toLong(), y.toLong()).readOutput().toInt()
-//                print(if (whether == 1) '#' else '.')
-//            }
-//            println()
-//        }
-        // 2x2 -> (21, 18)
-        // 3x3 -> (35, 30)
-        // 4x4 -> (50, 43)
-        val ratio = 21.0 / 18.0
-        val topLeft = generateSequence(50.0 to 43.0) { (_, y) ->
-            val newY = y + 1.0
-            (newY * ratio) to newY
-        }/*.filter { (_, y) ->
-            val closestY = round(y)
-            abs(y - closestY) < 0.1
-        }*/.map { (x, y) ->
-            Pt(round(x).toInt(), round(y).toInt())
+        val candidates = beam().map {
+            it to biggestSquare(it)
         }.dropWhile {
-            biggestSquare(it) < 100
-        }.first()
-        return topLeft.x * 10_000 + topLeft.y
+            it.second < 100
+        }.takeWhile {
+            it.second == 100
+        }.sortedBy { manhattan(Pt.ZERO, it.first) }.toList()
+        val best = candidates.first().first
+        return best.x * 10_000 + best.y
+    }
+
+    private fun isInBeam(pt: Pt) = IntcodeComputer(input, pt.x.toLong(), pt.y.toLong()).readOutput() == 1L
+
+    private fun beam(): Sequence<Pt> = sequence {
+        var start = Pt(6, 5)
+        while (true) {
+            var pt = start
+            while (isInBeam(pt)) {
+                yield(pt)
+                pt = Pt(pt.x + 1, pt.y)
+            }
+
+            start = Pt(start.x, start.y + 1)
+            while (!isInBeam(start)) {
+                start = Pt(start.x + 1, start.y)
+            }
+        }
     }
 
     private fun biggestSquare(topLeft: Pt): Int = min(verticalLineLength(topLeft), horizontalLineLength(topLeft))
 
-    private fun verticalLineLength(pt: Pt): Int = generateSequence(pt) { Pt(it.x, it.y + 1) }.map {
-        IntcodeComputer(input, it.x.toLong(), it.y.toLong()).readOutput().toInt()
-    }.takeWhile { it == 1 }.count()
+    private fun verticalLineLength(pt: Pt): Int = lineLength(pt, Pt(0, 1))
 
-    private fun horizontalLineLength(pt: Pt): Int = generateSequence(pt) { Pt(it.x + 1, it.y) }.map {
-        IntcodeComputer(input, it.x.toLong(), it.y.toLong()).readOutput().toInt()
-    }.takeWhile { it == 1 }.count()
+    private fun horizontalLineLength(pt: Pt): Int = lineLength(pt, Pt(1, 0))
+
+    private fun lineLength(pt: Pt, move: Pt): Int
+            = generateSequence(pt) { it + move }.map { isInBeam(it) }.takeWhile { it }.count()
 }
