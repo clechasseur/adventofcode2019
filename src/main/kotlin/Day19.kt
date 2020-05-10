@@ -24,13 +24,20 @@ object Day19 {
     }.count { it == 1 }
 
     fun part2(): Int {
+        print("   ")
+        (0 until 100).forEach { print(it % 10) }
+        println()
         (0 until 100).forEach { y ->
+            print("%3d".format(y))
             (0 until 100).forEach { x ->
                 val whether = IntcodeComputer(input, x.toLong(), y.toLong()).readOutput().toInt()
                 print(if (whether == 1) '#' else '.')
             }
             println()
         }
+        // 2x2 -> (21, 18)
+        // 3x3 -> (35, 30)
+        // 4x4 -> (50, 43)
         return 0
     }
 }
