@@ -1,5 +1,4 @@
 import org.clechasseur.adventofcode2019.Day17Data
-import org.clechasseur.adventofcode2019.Direction
 import org.clechasseur.adventofcode2019.IntcodeComputer
 import org.clechasseur.adventofcode2019.Pt
 
@@ -62,23 +61,23 @@ object Day17 {
             line.mapIndexed { x, c -> c to Pt(x, y) }
         }
         var botPos = taggedView.asSequence().flatten().filter { it.first == '^' }.single().second
-        var heading = Direction.UP
+        var heading = BotHeading.UP
         var moved = 0
         val path = mutableListOf<BotMovement>()
         var atEnd = false
         while (!atEnd) {
-            val nextPos = botPos + heading.displacement
+            val nextPos = botPos + heading.movement
             if (!inBounds(view, nextPos) || view[nextPos.y][nextPos.x] != '#') {
                 if (moved != 0) {
                     path.add(MoveBotForward(moved))
                     moved = 0
                 }
-                val leftPos = botPos + heading.left.displacement
+                val leftPos = botPos + heading.left.movement
                 if (inBounds(view, leftPos) && view[leftPos.y][leftPos.x] == '#') {
                     path.add(TurnBotLeft())
                     heading = heading.left
                 } else {
-                    val rightPos = botPos + heading.right.displacement
+                    val rightPos = botPos + heading.right.movement
                     if (inBounds(view, rightPos) && view[rightPos.y][rightPos.x] == '#') {
                         path.add(TurnBotRight())
                         heading = heading.right
@@ -87,7 +86,7 @@ object Day17 {
                     }
                 }
             } else {
-                botPos += heading.displacement
+                botPos += heading.movement
                 moved++
             }
         }
@@ -182,6 +181,27 @@ private class HaveBotExecuteProgram(val programName: String) : BotMovement {
 
     override fun equals(other: Any?) = other is HaveBotExecuteProgram && other.programName == programName
     override fun hashCode() = programName.hashCode()
+}
+
+private enum class BotHeading(val movement: Pt) {
+    UP(Pt(0, -1)),
+    DOWN(Pt(0, 1)),
+    LEFT(Pt(-1, 0)),
+    RIGHT(Pt(1, 0));
+
+    val left: BotHeading get() = when (this) {
+        UP -> LEFT
+        LEFT -> DOWN
+        DOWN -> RIGHT
+        RIGHT -> UP
+    }
+
+    val right: BotHeading get() = when (this) {
+        UP -> RIGHT
+        RIGHT -> DOWN
+        DOWN -> LEFT
+        LEFT -> UP
+    }
 }
 
 private class BotProgram(val programs: List<List<BotMovement>>) {
