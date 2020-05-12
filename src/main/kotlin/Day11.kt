@@ -1,5 +1,7 @@
+import org.clechasseur.adventofcode2019.Direction
 import org.clechasseur.adventofcode2019.IntcodeComputer
 import org.clechasseur.adventofcode2019.Pt
+import org.clechasseur.adventofcode2019.move
 import kotlin.math.min
 
 object Day11 {
@@ -46,7 +48,7 @@ object Day11 {
         val panels = initialPanels.toMap().toMutableMap()
         val computer = IntcodeComputer(input)
         var robot = Pt(0, 0)
-        var direction = RobotDirection.UP
+        var direction = Direction.UP
         while (!computer.done) {
             computer.addInput(panels.getOrDefault(robot, black).toLong())
             val output = computer.readAllOutput()
@@ -65,25 +67,6 @@ object Day11 {
         return panels
     }
 }
-
-private enum class RobotDirection(val displacement: Pt) {
-    LEFT(Pt(-1, 0)),
-    UP(Pt(0, 1)),
-    RIGHT(Pt(1, 0)),
-    DOWN(Pt(0, -1));
-
-    val left: RobotDirection get() = when (this) {
-        LEFT -> DOWN
-        else -> values()[ordinal - 1]
-    }
-
-    val right: RobotDirection get() = when (this) {
-        DOWN -> LEFT
-        else -> values()[ordinal + 1]
-    }
-}
-
-private fun Pt.move(direction: RobotDirection) = this + direction.displacement
 
 private fun Map<Pt, Int>.moveToPositive(): Map<Pt, Int> {
     val minX = min(map { it.key.x }.min()!!, 0)

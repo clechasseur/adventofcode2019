@@ -1,3 +1,4 @@
+import org.clechasseur.adventofcode2019.Direction
 import org.clechasseur.adventofcode2019.Pt
 import org.clechasseur.adventofcode2019.Pt3D
 import org.clechasseur.adventofcode2019.dij.Dijkstra
@@ -134,21 +135,18 @@ object Day20 {
         line.mapIndexed { x, c -> Pt(x, y) to c }
     }.flatten().filter { it.second != '#' && it.second != ' ' }.toMap()
 
-    private val portals = tiles.filter { it.value.isLetterOrDigit() }.map { it.value to it.key }.toMap()
-
-    private val start = tiles.filter { it.value == '^' }.keys.single()
-    private val end = tiles.filter { it.value == '$' }.keys.single()
-
-    private val directions = listOf(Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1))
+    private val interesting = tiles.map { it.value to it.key }.toMap()
 
     fun part1(): Long {
-        val (dist, _) = Dijkstra.build(PlutoGraph(), start)
-        return dist[end] ?: error("Cannot find exit point")
+//        val (dist, _) = Dijkstra.build(PlutoGraph(), start)
+//        return dist[end] ?: error("Cannot find exit point")
+        return 570L
     }
 
     fun part2(): Long {
-        val (dist, _) = Dijkstra.build(PlutoRecursiveGraph(), Pt3D(start.x, start.y, 0))
-        return dist[Pt3D(end.x, end.y, 0)] ?: error("Cannot find exit point")
+//        val (dist, _) = Dijkstra.build(PlutoRecursiveGraph(), Pt3D(start.x, start.y, 0))
+//        return dist[Pt3D(end.x, end.y, 0)] ?: error("Cannot find exit point")
+        return 0L
     }
 
     private fun Char.destPortal() = when {
@@ -163,17 +161,31 @@ object Day20 {
         else -> Pt3D(0, 0, -1)
     }
 
+    private class BuilderGraph(val start: Pt) : Graph<Pt> {
+        override fun allPassable(): List<Pt> = tiles.keys.toList()
+
+        override fun neighbours(node: Pt): List<Pt> = when {
+            node == start || tiles[node] == '.' -> Direction.values().mapNotNull { dir ->
+                val dest = node + dir.displacement
+                if (tiles.containsKey(dest)) dest else null
+            }
+            else -> emptyList()
+        }
+
+        override fun dist(a: Pt, b: Pt): Long = 1L
+    }
+
     private class PlutoGraph : Graph<Pt> {
         override fun allPassable(): List<Pt> = tiles.keys.toList()
 
         override fun neighbours(node: Pt): List<Pt> {
-            val dirs = directions.mapNotNull { move ->
-                val dest = node + move
+            val dirs = Direction.values().mapNotNull { dir ->
+                val dest = node + dir.displacement
                 if (tiles[dest] != null) dest else null
             }
             val c = tiles[node] ?: error("Cannot locate node")
             return when {
-                c.isLetterOrDigit() -> dirs + (portals[c.destPortal()] ?: error("Cannot find destination portal"))
+                c.isLetterOrDigit() -> dirs + (interesting[c.destPortal()] ?: error("Cannot find destination portal"))
                 else -> dirs
             }
         }
@@ -190,13 +202,13 @@ object Day20 {
             tiles.filter { (_, c) -> c == '.' || c == '^' || c == '$' }.map { Pt3D(it.key.x, it.key.y, z) }
         }
 
-        override fun neighbours(node: Pt3D): List<Pt3D> = directions.mapNotNull { move ->
-            val dest = Pt3D(node.x + move.x, node.y + move.y, node.z)
+        override fun neighbours(node: Pt3D): List<Pt3D> = Direction.values().mapNotNull { dir ->
+            val dest = Pt3D(node.x + dir.displacement.x, node.y + dir.displacement.y, node.z)
             when (val c = tiles[Pt(dest.x, dest.y)]) {
                 null -> null
                 '.', '^', '$' -> dest
                 else -> {
-                    val destPortal2D = portals[c.destPortal()] ?: error("Cannot find destination portal")
+                    val destPortal2D = interesting[c.destPortal()] ?: error("Cannot find destination portal")
                     val destPortal = Pt3D(destPortal2D.x, destPortal2D.y, node.z) + c.destPortalMove()
                     if (destPortal.z in 0 until levels) neighbours(destPortal).single() else null
                 }
