@@ -15,6 +15,11 @@ enum class Direction(val c: Char, val displacement: Pt) {
         DOWN -> LEFT
         else -> values()[ordinal + 1]
     }
+
+    companion object {
+        val displacements: List<Pt>
+            get() = values().map { it.displacement }
+    }
 }
 
 fun Char.toDirection(): Direction = Direction.values().first { it.c == this }

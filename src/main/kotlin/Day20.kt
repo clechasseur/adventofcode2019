@@ -137,10 +137,14 @@ object Day20 {
 
     private val interesting = tiles.map { it.value to it.key }.toMap()
 
+    private val graph = interesting.map { (_, pos) ->
+        val (dist, _) = Dijkstra.build(BuilderGraph(pos), pos)
+        pos to dist.filter { (pt, d) -> pt != pos && tiles[pt] != '.' && d != Long.MAX_VALUE }
+    }.toMap()
+
     fun part1(): Long {
-//        val (dist, _) = Dijkstra.build(PlutoGraph(), start)
-//        return dist[end] ?: error("Cannot find exit point")
-        return 570L
+        val (dist, _) = Dijkstra.build(PlutoGraph(), interesting['^']!!)
+        return dist[interesting['$']!!]!!
     }
 
     fun part2(): Long {
@@ -164,11 +168,11 @@ object Day20 {
     private class BuilderGraph(val start: Pt) : Graph<Pt> {
         override fun allPassable(): List<Pt> = tiles.keys.toList()
 
-        override fun neighbours(node: Pt): List<Pt> = when {
-            node == start || tiles[node] == '.' -> Direction.values().mapNotNull { dir ->
-                val dest = node + dir.displacement
-                if (tiles.containsKey(dest)) dest else null
-            }
+        override fun neighbours(node: Pt): List<Pt> = Direction.displacements.mapNotNull { move ->
+            val dest = node + move
+            if (tiles.containsKey(dest)) dest else null
+        } + when (node) {
+            start -> listOf(interesting[tiles[node]!!.destPortal()]!!)
             else -> emptyList()
         }
 
@@ -176,21 +180,11 @@ object Day20 {
     }
 
     private class PlutoGraph : Graph<Pt> {
-        override fun allPassable(): List<Pt> = tiles.keys.toList()
+        override fun allPassable(): List<Pt> = graph.keys.toList()
 
-        override fun neighbours(node: Pt): List<Pt> {
-            val dirs = Direction.values().mapNotNull { dir ->
-                val dest = node + dir.displacement
-                if (tiles[dest] != null) dest else null
-            }
-            val c = tiles[node] ?: error("Cannot locate node")
-            return when {
-                c.isLetterOrDigit() -> dirs + (interesting[c.destPortal()] ?: error("Cannot find destination portal"))
-                else -> dirs
-            }
-        }
+        override fun neighbours(node: Pt): List<Pt> = graph[node]!!.keys.toList()
 
-        override fun dist(a: Pt, b: Pt): Long = 1L
+        override fun dist(a: Pt, b: Pt): Long = graph[a]!![b]!!
     }
 
     private class PlutoRecursiveGraph : Graph<Pt3D> {
