@@ -60,6 +60,10 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long, initialSta
         }
     }
 
+    fun addAsciiInput(s: String) {
+        addInput(*s.map { it.toLong() }.toLongArray())
+    }
+
     fun hasOutput() = output.isNotEmpty()
 
     fun readOutput(): Long {
