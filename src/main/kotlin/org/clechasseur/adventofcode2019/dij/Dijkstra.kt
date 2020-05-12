@@ -34,6 +34,7 @@ object Dijkstra {
             path.add(n)
             n = prev[n] ?: return null
         }
+        path.add(start)
         return path.reversed()
     }
 }

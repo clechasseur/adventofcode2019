@@ -9,6 +9,8 @@ data class Pt3D(val x: Int, val y: Int, val z: Int) : Comparable<Pt3D> {
         val ZERO = Pt3D(0, 0, 0)
     }
 
+    override fun toString(): String = "($x, $y, $z)"
+
     override fun compareTo(other: Pt3D): Int = manhattan(this, ZERO) - manhattan(other, ZERO)
 
     operator fun plus(pt: Pt3D) = Pt3D(x + pt.x, y + pt.y, z + pt.z)

@@ -148,9 +148,10 @@ object Day20 {
     }
 
     fun part2(): Long {
-//        val (dist, _) = Dijkstra.build(PlutoRecursiveGraph(), Pt3D(start.x, start.y, 0))
-//        return dist[Pt3D(end.x, end.y, 0)] ?: error("Cannot find exit point")
-        return 0L
+        val start2d = interesting['^']!!
+        val end2d = interesting['$']!!
+        val (dist, _) = Dijkstra.build(PlutoRecursiveGraph(), Pt3D(start2d.x, start2d.y, 0))
+        return dist[Pt3D(end2d.x, end2d.y, 0)]!!
     }
 
     private fun Char.destPortal() = when {
@@ -161,19 +162,26 @@ object Day20 {
     }
 
     private fun Char.destPortalMove() = when {
-        this == '0' || isUpperCase() -> Pt3D(0, 0, 1)
-        else -> Pt3D(0, 0, -1)
+        this == '0' || isUpperCase() -> Pt3D(0, 0, -1)
+        else -> Pt3D(0, 0, 1)
     }
 
     private class BuilderGraph(val start: Pt) : Graph<Pt> {
         override fun allPassable(): List<Pt> = tiles.keys.toList()
 
-        override fun neighbours(node: Pt): List<Pt> = Direction.displacements.mapNotNull { move ->
-            val dest = node + move
-            if (tiles.containsKey(dest)) dest else null
-        } + when (node) {
-            start -> listOf(interesting[tiles[node]!!.destPortal()]!!)
-            else -> emptyList()
+        override fun neighbours(node: Pt): List<Pt> {
+            val c = tiles[node]!!
+            if (c.isLetterOrDigit() && node != start) {
+                return emptyList()
+            }
+            val dirs = Direction.displacements.mapNotNull { move ->
+                val dest = node + move
+                if (tiles.containsKey(dest)) dest else null
+            }
+            return when {
+                c.isLetterOrDigit() -> dirs + interesting[tiles[node]!!.destPortal()]!!
+                else -> dirs
+            }
         }
 
         override fun dist(a: Pt, b: Pt): Long = 1L
@@ -189,26 +197,23 @@ object Day20 {
 
     private class PlutoRecursiveGraph : Graph<Pt3D> {
         companion object {
-            private val levels = 32
+            private const val levels = 32
         }
 
-        override fun allPassable(): List<Pt3D> = (0 until levels).flatMap { z ->
-            tiles.filter { (_, c) -> c == '.' || c == '^' || c == '$' }.map { Pt3D(it.key.x, it.key.y, z) }
-        }
+        override fun allPassable(): List<Pt3D> = (0 until levels).flatMap { z -> graph.keys.map { Pt3D(it.x, it.y, z) } }
 
-        override fun neighbours(node: Pt3D): List<Pt3D> = Direction.values().mapNotNull { dir ->
-            val dest = Pt3D(node.x + dir.displacement.x, node.y + dir.displacement.y, node.z)
-            when (val c = tiles[Pt(dest.x, dest.y)]) {
-                null -> null
-                '.', '^', '$' -> dest
-                else -> {
-                    val destPortal2D = interesting[c.destPortal()] ?: error("Cannot find destination portal")
-                    val destPortal = Pt3D(destPortal2D.x, destPortal2D.y, node.z) + c.destPortalMove()
-                    if (destPortal.z in 0 until levels) neighbours(destPortal).single() else null
+        override fun neighbours(node: Pt3D): List<Pt3D> {
+            val node2d = Pt(node.x, node.y)
+            val nodeC = tiles[node2d]!!
+            return graph[node2d]!!.keys.map { dest2d ->
+                val dest = Pt3D(dest2d.x, dest2d.y, node.z)
+                when {
+                    nodeC.isLetterOrDigit() && tiles[dest2d] == nodeC.destPortal() -> dest + nodeC.destPortalMove()
+                    else -> dest
                 }
-            }
+            }.filter { it.z in 0 until levels }
         }
 
-        override fun dist(a: Pt3D, b: Pt3D): Long = 1L
+        override fun dist(a: Pt3D, b: Pt3D): Long = graph[Pt(a.x, a.y)]!![Pt(b.x, b.y)]!!
     }
 }
