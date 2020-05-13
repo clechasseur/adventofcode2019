@@ -1,15 +1,23 @@
 import kotlin.math.abs
 
 object Day22 {
-    private const val deckSize = 10_007
+    private const val spaceDeckSize = 10_007
 
     fun part1(): Int {
-        val deck = Deck(deckSize)
+        val deck = Deck(spaceDeckSize)
         shuffle(deck)
         return deck.cards.indexOf(2019)
     }
 
-    fun part2() = 0
+    fun part2(): Int {
+        val deck = Deck(spaceDeckSize)
+        var n = 0
+        do {
+            shuffle(deck)
+            n++
+        } while (deck.cards != (0 until spaceDeckSize).toList())
+        return n
+    }
 
     private fun shuffle(deck: Deck) {
         deck.apply {
