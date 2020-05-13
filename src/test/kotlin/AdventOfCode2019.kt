@@ -142,7 +142,7 @@ class AdventOfCode2019 {
                     " ###  ##   ###  ##   #    ###  #  # ##     \n" +
                     " #    # #  #    # #  #    #    ###  # #    \n" +
                     " #    # #  #    # #  #  # #    # #  # #    \n" +
-                    " #    #  # #### #  #  ##  #    #  # #  #   ";
+                    " #    #  # #### #  #  ##  #    #  # #  #   "
         }
 
         @Test
@@ -274,6 +274,18 @@ class AdventOfCode2019 {
         @Test
         fun `day 21, part 2`() {
             assertEquals(1142814363L, Day21.part2())
+        }
+    }
+
+    class Day22Puzzles {
+        @Test
+        fun `day 22, part 1`() {
+            assertEquals(2604, Day22.part1())
+        }
+
+        @Test
+        fun `day 22, part 2`() {
+            assertEquals(0, Day22.part2())
         }
     }
 }
