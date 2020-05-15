@@ -110,8 +110,6 @@ object Day22 {
         techniques.forEach { it(deck) }
         return deck.cards.indexOf(2019L).toLong()
     }
-
-    fun part2() = 0L
 }
 
 private class Deck(val size: Long) {
