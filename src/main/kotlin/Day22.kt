@@ -1,4 +1,5 @@
 import kotlin.math.abs
+import kotlin.math.max
 
 object Day22 {
     private val input = """
@@ -105,44 +106,71 @@ object Day22 {
     """.trimIndent()
 
     fun part1(): Long {
-        val techniques = input.lineSequence().map { it.toTechnique() }
-        val deck = Deck(10_007)
-        techniques.forEach { it(deck) }
-        return deck.cards.indexOf(2019L).toLong()
+        val deckSize = 10_007L
+        val techniques = reduce(input.lineSequence().toList().flatMap { it.toTechniques(deckSize) }, deckSize)
+        return finalPositionForCard(card = 2019L, techniques = techniques, deckSize = deckSize)
     }
-}
 
-private class Deck(val size: Long) {
-    var cards = (0 until size).toList()
+    fun part2() = 0L
 }
 
 private interface Technique {
-    operator fun invoke(deck: Deck)
-}
-
-private class DealIntoNewStack : Technique {
-    override fun invoke(deck: Deck) {
-        deck.cards = deck.cards.reversed()
-    }
+    fun nextPositionForCard(card: Long, deckSize: Long): Long
+    fun canBeCombinedWith(other: Technique): Boolean
+    fun combine(other: Technique, deckSize: Long): List<Technique>
 }
 
 private class Cut(val n: Long) : Technique {
-    override fun invoke(deck: Deck) {
-        val absn = if (n >= 0) n else deck.size - abs(n)
-        deck.cards = deck.cards.drop(absn.toInt()) + deck.cards.take(absn.toInt())
+    override fun nextPositionForCard(card: Long, deckSize: Long): Long = Math.floorMod(card - n, deckSize)
+
+    override fun canBeCombinedWith(other: Technique): Boolean = true
+
+    override fun combine(other: Technique, deckSize: Long): List<Technique> = when (other) {
+        is Cut -> listOf(Cut(Math.floorMod(n + other.n, deckSize)))
+        is DealWithIncrement -> listOf(DealWithIncrement(other.n), Cut(mulMod(n, other.n, deckSize)))
+        else -> error("Invalid technique combination")
     }
 }
 
 private class DealWithIncrement(val n: Long): Technique {
-    override fun invoke(deck: Deck) {
-        val indexes = (0 until deck.size).map { (it * n) % deck.size }.zip(0 until deck.size)
-        deck.cards = List(deck.size.toInt()) { idx -> deck.cards[indexes.find { it.first == idx.toLong() }!!.second.toInt()] }
+    override fun nextPositionForCard(card: Long, deckSize: Long): Long = Math.floorMod(card * n, deckSize)
+
+    override fun canBeCombinedWith(other: Technique): Boolean = other !is Cut
+
+    override fun combine(other: Technique, deckSize: Long): List<Technique> = when (other) {
+        is DealWithIncrement -> listOf(DealWithIncrement(mulMod(n, other.n, deckSize)))
+        else -> error("Invalid technique combination")
     }
 }
 
-private fun String.toTechnique(): Technique = when {
-    this == "deal into new stack" -> DealIntoNewStack()
-    startsWith("cut ") -> Cut(substring(4).toLong())
-    startsWith("deal with increment ") -> DealWithIncrement(substring(20).toLong())
+private fun String.toTechniques(deckSize: Long): List<Technique> = when {
+    startsWith("cut ") -> listOf(Cut(substring(4).toLong()))
+    startsWith("deal with increment ") -> listOf(DealWithIncrement(substring(20).toLong()))
+    this == "deal into new stack" -> listOf(DealWithIncrement(deckSize - 1L), Cut(1L))
     else -> error("Unknown technique: $this")
+}
+
+private fun mulMod(a: Long, b: Long, mod: Long): Long {
+    return a.toBigInteger().multiply(b.toBigInteger()).mod(mod.toBigInteger()).longValueExact()
+}
+
+private fun reduce(techniques: List<Technique>, deckSize: Long): List<Technique> {
+    var process = techniques
+    while (process.size > 2) {
+        var offset = 0
+        while (offset < process.size - 1) {
+            if (process[offset].canBeCombinedWith(process[offset + 1])) {
+                val combined = process[offset].combine(process[offset + 1], deckSize)
+                process = process.subList(0, offset) + combined + process.subList(offset + 2, process.size)
+                offset = max(0, offset - 1)
+            } else {
+                offset++
+            }
+        }
+    }
+    return process
+}
+
+private fun finalPositionForCard(card: Long, techniques: List<Technique>, deckSize: Long): Long {
+    return techniques.fold(card) { pos, technique -> technique.nextPositionForCard(pos, deckSize) }
 }

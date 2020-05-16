@@ -282,5 +282,10 @@ class AdventOfCode2019 {
         fun `day 22, part 1`() {
             assertEquals(2604L, Day22.part1())
         }
+
+        @Test
+        fun `day 22, part 2`() {
+            assertEquals(0L, Day22.part2())
+        }
     }
 }
