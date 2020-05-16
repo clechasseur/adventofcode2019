@@ -1,4 +1,3 @@
-import kotlin.math.abs
 import kotlin.math.max
 
 object Day22 {
@@ -105,13 +104,27 @@ object Day22 {
         cut -4202
     """.trimIndent()
 
+    // Stole this one from: https://github.com/nibarius/aoc/blob/master/src/main/aoc2019/Day22.kt
+
     fun part1(): Long {
         val deckSize = 10_007L
         val techniques = reduce(input.lineSequence().toList().flatMap { it.toTechniques(deckSize) }, deckSize)
         return finalPositionForCard(card = 2019L, techniques = techniques, deckSize = deckSize)
     }
 
-    fun part2() = 0L
+    fun part2(): Long {
+        val deckSize = 119_315_717_514_047L
+        val repeats = 101_741_582_076_661L
+        val targetPosition = 2020L
+
+        val shufflesLeftUntilInitialState = deckSize - 1 - repeats
+
+        val techniques = reduce(input.lineSequence().toList().flatMap { it.toTechniques(deckSize) }, deckSize)
+        val reduced = reduce(techniques, deckSize)
+        val repeated = repeat(reduced, shufflesLeftUntilInitialState, deckSize)
+
+        return finalPositionForCard(card = targetPosition, techniques = repeated, deckSize = deckSize)
+    }
 }
 
 private interface Technique {
@@ -169,6 +182,18 @@ private fun reduce(techniques: List<Technique>, deckSize: Long): List<Technique>
         }
     }
     return process
+}
+
+private fun repeat(techniques: List<Technique>, times: Long, deckSize: Long): List<Technique> {
+    var current = techniques
+    val res = mutableListOf<Technique>()
+    for (bit in times.toString(2).reversed()) {
+        if (bit == '1') {
+            res.addAll(current)
+        }
+        current = reduce(current + current, deckSize)
+    }
+    return reduce(res, deckSize)
 }
 
 private fun finalPositionForCard(card: Long, techniques: List<Technique>, deckSize: Long): Long {
