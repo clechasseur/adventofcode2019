@@ -77,6 +77,10 @@ class IntcodeComputer(program: List<Long>, vararg initialInput: Long, initialSta
         return allOutput
     }
 
+    fun printAsciiOutput() {
+        readAllOutput().forEach { print(it.toChar()) }
+    }
+
     fun snapshot(): IntcodeComputer {
         require(state != State.RUNNING) { "Cannot snapshot a running computer" }
         val clone = IntcodeComputer(ram, *input.toLongArray(), initialState = state)

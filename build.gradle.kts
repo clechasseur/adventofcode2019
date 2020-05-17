@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "1.3.72"
+    application
 }
 
 group = "org.clechasseur"
@@ -30,4 +31,12 @@ tasks.withType<Test> {
         outputs.upToDateWhen { false }
         showStandardStreams = true
     }
+}
+
+application {
+    mainClassName = "Day25Kt"
+}
+
+val run by tasks.getting(JavaExec::class) {
+    standardInput = System.`in`
 }
